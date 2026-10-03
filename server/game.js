@@ -321,6 +321,7 @@ class Game {
     if (t < p.lastShot + def.rate || p.reloadEnd > t) return;
     if (w.ammo <= 0) { this.reload(p); return; }
     w.ammo--; p.lastShot = t;
+    this.pushEvent({ k: 'shot', id: p.id, w: w.key });
     for (let i = 0; i < def.pellets; i++) {
       const a = p.angle + (Math.random() - 0.5) * 2 * def.spread;
       this.bullets.push({ x: p.x + Math.cos(p.angle) * (PLAYER_R + 6), y: p.y + Math.sin(p.angle) * (PLAYER_R + 6), vx: Math.cos(a) * def.speed, vy: Math.sin(a) * def.speed, owner: p.id, dmg: Math.round(def.dmg * RARITY_INFO[w.rarity].mult), left: def.range, key: w.key });
@@ -341,7 +342,7 @@ class Game {
     this.botReleaseChest(victim);
     this.dropAll(victim);
     if (attacker && attacker !== victim) attacker.kills++;
-    this.pushEvent({ k: 'kill', killer: attacker ? attacker.name : null, killerColor: attacker ? attacker.color : null, victim: victim.name, victimColor: victim.color, weapon: weaponKey ? WEAPONS[weaponKey].name : 'the storm' });
+    this.pushEvent({ k: 'kill', x: Math.round(victim.x), y: Math.round(victim.y), killer: attacker ? attacker.name : null, killerColor: attacker ? attacker.color : null, victim: victim.name, victimColor: victim.color, weapon: weaponKey ? WEAPONS[weaponKey].name : 'the storm' });
     if (this.settings.mode === 'dm') {
       if (victim.isBot) setTimeout(() => { if (this.phase === 'playing' && this.players.has(victim.id) && !victim.alive) this.spawn(victim); }, 4000);
       else setTimeout(() => { if (this.phase === 'playing' && this.players.has(victim.id) && !victim.alive && !victim.question) this.askRespawn(victim); }, 2000);
@@ -499,7 +500,7 @@ class Game {
   broadcastState(t) {
     const players = [...this.players.values()].map((p) => {
       const w = p.inv[p.slot];
-      return { id: p.id, n: p.name, c: p.color, x: Math.round(p.x), y: Math.round(p.y), a: +p.angle.toFixed(2), hp: Math.round(p.hp), sh: Math.round(p.shield), al: p.alive ? 1 : 0, w: w && w.type === 'weapon' ? w.key : (w ? w.key : null), q: p.question ? 1 : 0, u: p.useItem ? 1 : 0, k: p.kills, pr: p.protectUntil > t ? 1 : 0, bot: p.isBot ? 1 : 0, ok: p.correct };
+      return { id: p.id, n: p.name, c: p.color, x: Math.round(p.x), y: Math.round(p.y), a: +p.angle.toFixed(2), hp: Math.round(p.hp), sh: Math.round(p.shield), al: p.alive ? 1 : 0, w: w ? w.key : null, wr: w && w.type === 'weapon' ? w.rarity : null, q: p.question ? 1 : 0, u: p.useItem ? 1 : 0, k: p.kills, pr: p.protectUntil > t ? 1 : 0, bot: p.isBot ? 1 : 0, ok: p.correct };
     });
     const chests = this.chests.map((c) => { const row = [c.id, RARITIES.indexOf(c.rarity), c.state === 'open' ? 1 : (c.busyBy ? 2 : ((c.lockedUntil || 0) > t ? 3 : 0))]; if (c.moved) row.push(Math.round(c.x), Math.round(c.y)); return row; });
     const bullets = this.bullets.map((b) => [Math.round(b.x), Math.round(b.y), +Math.atan2(b.vy, b.vx).toFixed(2)]);

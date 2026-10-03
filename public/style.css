@@ -2,7 +2,7 @@
 html, body { margin: 0; height: 100%; overflow: hidden; background: #1b2838; font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif; color: #fff; }
 canvas#game { position: fixed; inset: 0; display: block; cursor: crosshair; outline: none; touch-action: none; }
 .hidden { display: none !important; }
-.screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 30%, #2f5c8f, #101a26 70%); z-index: 10; }
+.screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 30%, rgba(30,60,95,0.55), rgba(10,18,28,0.88) 75%); z-index: 10; }
 .screen.overlay { background: rgba(5, 12, 22, 0.72); }
 .card { background: #16222f; border: 2px solid #2c4a6b; border-radius: 16px; padding: 28px 32px; width: min(92vw, 440px); box-shadow: 0 20px 60px rgba(0,0,0,.5); }
 .card.wide { width: min(94vw, 760px); max-height: 92vh; overflow: auto; }
@@ -45,7 +45,7 @@ button.link { background: none; border: 0; color: #8aa0b6; text-decoration: unde
 .slot { width: 74px; height: 74px; background: rgba(0,0,0,.55); border: 2px solid rgba(255,255,255,.3); border-radius: 10px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; text-align: center; padding: 4px; }
 .slot.active { border-color: #ffd34d; box-shadow: 0 0 12px #ffd34d88; background: rgba(40,30,0,.7); }
 .slot .num { position: absolute; top: 2px; left: 6px; font-size: 11px; color: #ccc; } .slot .ammo { position: absolute; bottom: 2px; right: 6px; font-size: 12px; font-weight: 700; }
-.slot .icon { font-size: 24px; } .slot .name { font-weight: 600; line-height: 1.1; }
+.slot .icon { font-size: 24px; } .slot .gicon { width: 64px; height: 32px; } .slot .name { font-weight: 600; line-height: 1.1; }
 #prompt { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(0,0,0,.65); padding: 8px 16px; border-radius: 10px; font-weight: 700; font-size: 18px; }
 #prompt b { color: #ffd34d; }
 #toast { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); max-width: 80vw; background: rgba(0,0,0,.7); padding: 12px 22px; border-radius: 12px; font-weight: 800; font-size: 26px; text-align: center; border: 2px solid #fff3; }
