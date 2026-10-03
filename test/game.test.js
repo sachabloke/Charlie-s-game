@@ -98,3 +98,13 @@ test('pressing E on a dropped gun picks it up, or swaps when the bag is full', (
   assert.strictEqual(p.shield, 25);
   g.removePlayer(p.id);
 });
+
+test('reloading refills the magazine', () => {
+  const g = new Game('RL', () => {}); clearInterval(g.timer);
+  const p = g.addHuman(fakeWs(), 'Charlie'); g.handle(p, { t: 'settings', mode: 'dm', bots: 0 }); g.handle(p, { t: 'start' });
+  const w = p.inv[0]; w.ammo = 0; p.input = { u: 0, d: 0, l: 0, r: 0, a: 0, s: 1 };
+  g.last = Date.now() - 50; g.tick(); assert.ok(p.reloadEnd > Date.now(), 'reload started when empty');
+  p.reloadEnd = Date.now() - 1; g.last = Date.now() - 50; g.tick();
+  assert.strictEqual(w.ammo, 12, 'pistol magazine refilled');
+  g.removePlayer(p.id);
+});

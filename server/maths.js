@@ -16,6 +16,7 @@ function toRoman(n) {
   for (const [v, r] of map) while (n >= v) { s += r; n -= v; }
   return s;
 }
+const ordinal = (k) => k + (k % 10 === 1 && k !== 11 ? 'st' : k % 10 === 2 && k !== 12 ? 'nd' : k % 10 === 3 && k !== 13 ? 'rd' : 'th');
 const isPrime = (n) => { if (n < 2) return false; for (let i = 2; i * i <= n; i++) if (n % i === 0) return false; return true; };
 
 // Answer kinds:
@@ -47,7 +48,7 @@ def(1, 'Number bonds', () => {
 });
 def(1, 'Place value', () => {
   const digits = rand(4, 5); let n; let pos; let digit;
-  do { n = rand(10 ** (digits - 1), 10 ** digits - 1); pos = rand(0, digits - 1); digit = Math.floor(n / 10 ** pos) % 10; } while (digit === 0);
+  do { n = rand(10 ** (digits - 1), 10 ** digits - 1); pos = rand(0, digits - 1); digit = Math.floor(n / 10 ** pos) % 10; } while (digit === 0 || String(n).split('').filter((c) => c === String(digit)).length > 1);
   return num(`What is the value of the digit ${digit} in ${n.toLocaleString('en-GB')}?`, digit * 10 ** pos, { hint: 'Think about which column the digit is in.' });
 });
 def(1, 'Counting in steps', () => {
@@ -81,13 +82,13 @@ def(2, 'Subtracting fractions', () => {
 const FD = [[1, 2, 0.5], [1, 4, 0.25], [3, 4, 0.75], [1, 5, 0.2], [2, 5, 0.4], [3, 5, 0.6], [4, 5, 0.8], [1, 10, 0.1], [3, 10, 0.3], [7, 10, 0.7], [9, 10, 0.9], [1, 8, 0.125], [1, 100, 0.01], [1, 20, 0.05]];
 def(2, 'Fractions and decimals', () => {
   const [n, d, dec] = pick(FD);
-  if (Math.random() < 0.5) return num(`Write ${n}/${d} as a decimal.`, dec);
-  return num(`Write ${dec} as a fraction.`, dec, { display: `${n}/${d}` });
+  if (Math.random() < 0.5) return { text: `Write ${n}/${d} as a decimal.`, kind: 'decimal', answer: dec, display: String(dec) };
+  return { text: `Write ${dec} as a fraction.`, kind: 'fraction', answer: dec, display: `${n}/${d}` };
 });
 def(2, 'Fractions and percentages', () => {
   const [n, d, dec] = pick(FD);
-  if (Math.random() < 0.5) return num(`Write ${n}/${d} as a percentage.`, round(dec * 100), { display: `${round(dec * 100)}%` });
-  return num(`Write ${round(dec * 100)}% as a fraction.`, dec, { display: `${n}/${d}` });
+  if (Math.random() < 0.5) return { text: `Write ${n}/${d} as a percentage.`, kind: 'percent', answer: round(dec * 100), display: `${round(dec * 100)}%` };
+  return { text: `Write ${round(dec * 100)}% as a fraction.`, kind: 'fraction', answer: dec, display: `${n}/${d}` };
 });
 def(2, 'Negative numbers', () => {
   const r = Math.random();
@@ -178,7 +179,7 @@ def(3, 'Square numbers', () => {
 def(3, 'Primes, factors and multiples', () => {
   const r = rand(1, 4);
   if (r === 1) { const n = rand(2, 50); return { text: `Is ${n} a prime number? (yes or no)`, kind: 'exact', answer: isPrime(n) ? 'yes' : 'no', display: isPrime(n) ? 'yes' : 'no' }; }
-  if (r === 2) { const n = rand(3, 12), k = rand(3, 9); return num(`What is the ${k}th multiple of ${n}?`, n * k); }
+  if (r === 2) { const n = rand(3, 12), k = rand(3, 9); return num(`What is the ${ordinal(k)} multiple of ${n}?`, n * k); }
   if (r === 3) { const g = pick([2, 3, 4, 5, 6]); const a = g * rand(2, 5); let b; do { b = g * rand(2, 6); } while (b === a); return num(`What is the highest common factor of ${a} and ${b}?`, gcd(a, b)); }
   const a = pick([2, 3, 4, 5, 6]); let b; do { b = pick([3, 4, 5, 6, 8]); } while (b === a); return num(`What is the lowest common multiple of ${a} and ${b}?`, (a * b) / gcd(a, b));
 });
@@ -210,10 +211,10 @@ def(4, 'Order of operations (BIDMAS)', () => {
   const t = rand(1, 6);
   if (t === 1) return num(`${a} + ${b} × ${c} = ?`, a + b * c, { hint: 'Multiply before you add.' });
   if (t === 2) return num(`(${a} + ${b}) × ${c} = ?`, (a + b) * c, { hint: 'Brackets first.' });
-  if (t === 3) return num(`${a} × ${b} − ${c} = ?`, a * b - c);
+  if (t === 3) { const cc = Math.min(c, a * b - 1); return num(`${a} × ${b} − ${cc} = ?`, a * b - cc); }
   if (t === 4) return num(`${a * b} ÷ ${a} + ${c} = ?`, b + c, { hint: 'Divide before you add.' });
   if (t === 5) return num(`${a}² + ${b} = ?`, a * a + b);
-  return num(`${a + b + c + 10} − ${b} × ${c} = ?`, a + b + c + 10 - b * c, { hint: 'Multiply before you subtract.' });
+  const big = b * c + rand(2, 20); return num(`${big} − ${b} × ${c} = ?`, big - b * c, { hint: 'Multiply before you subtract.' });
 });
 def(4, 'Multiplying fractions', () => {
   const r = rand(1, 3);
@@ -237,9 +238,8 @@ def(4, 'Algebra', () => {
 });
 def(4, 'Mean (average)', () => {
   const mean = rand(4, 20); const count = rand(3, 5);
-  const nums = []; let sum = 0;
-  for (let i = 0; i < count - 1; i++) { const v = rand(Math.max(1, mean - 6), mean + 6); nums.push(v); sum += v; }
-  const last = mean * count - sum; if (last < 0) return num(`What is the mean of ${nums.join(', ')} and ${mean}?`, round((sum + mean) / count, 2));
+  let nums, last;
+  do { nums = []; let sum = 0; for (let i = 0; i < count - 1; i++) { const v = rand(Math.max(1, mean - 5), mean + 5); nums.push(v); sum += v; } last = mean * count - sum; } while (last < 1 || last > mean + 8);
   nums.push(last);
   return num(`What is the mean of ${nums.join(', ')}?`, mean, { hint: 'Add them up, then divide by how many there are.' });
 });
@@ -281,7 +281,8 @@ function parseNumeric(input) {
   if (/^-?\d*\.?\d+$/.test(s)) return parseFloat(s);
   return null;
 }
-const norm = (s) => String(s).toLowerCase().replace(/\s+/g, '').replace(/\.$/, '');
+const norm = (s) => { s = String(s).toLowerCase().replace(/[\s!.]+/g, ''); if (s === 'y') return 'yes'; if (s === 'n') return 'no'; return s; };
+const close = (v, ans) => Math.abs(v - ans) <= Math.min(0.0011, Math.max(1e-9, Math.abs(ans) * 0.002));
 
 function check(q, input) {
   if (input == null) return false;
@@ -290,8 +291,19 @@ function check(q, input) {
   switch (q.kind) {
     case 'number': {
       const v = parseNumeric(s); if (v === null) return false;
-      if (Math.abs(v - q.answer) < 0.0011) return true;
-      return s.includes('%') && Math.abs(v / 100 - q.answer) < 0.0011; // "75%" for 0.75
+      if (close(v, q.answer)) return true;
+      return s.includes('%') && close(v / 100, q.answer); // "75%" for 0.75
+    }
+    case 'decimal': { // must be written as a decimal like 0.75
+      if (!/^-?\d*\.\d+$/.test(s.replace(/\s+/g, '')) && !/^-?\d+$/.test(s.trim())) return false;
+      const v = parseNumeric(s); return v !== null && close(v, q.answer);
+    }
+    case 'fraction': { // must be written as a fraction like 3/4 (any equivalent fraction is fine)
+      const m = s.replace(/\s+/g, '').match(/^(-?\d+)\/(\d+)$/); if (!m || !+m[2]) return false;
+      return close(+m[1] / +m[2], q.answer);
+    }
+    case 'percent': { // a number, optionally with %
+      if (s.includes('/')) return false; const v = parseNumeric(s); return v !== null && close(v, q.answer);
     }
     case 'fraction-simplest': {
       const m = s.replace(/\s+/g, '').match(/^(-?\d+)\/(\d+)$/);

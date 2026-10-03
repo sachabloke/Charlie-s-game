@@ -134,7 +134,7 @@ class Game {
     if (this.hostId === id) { const h = this.humans()[0]; this.hostId = h ? h.id : null; }
     if (this.humans().length === 0) { clearInterval(this.timer); this.onEmpty(this.code); return; }
     this.pushEvent({ k: 'info', msg: `${p.name} left.` });
-    this.broadcastLobby();
+    this.broadcastLobby(); this.checkWinner();
   }
   setBots(n) {
     n = clamp(n | 0, 0, 4);
@@ -161,7 +161,7 @@ class Game {
       case 'skin': if (HATS.includes(m.hat)) p.hat = m.hat; if (PLAYER_COLORS.includes(m.color)) p.color = m.color; this.broadcastLobby(); break;
       case 'lobby': if (p.id === this.hostId && this.phase === 'ended') this.toLobby(); break;
       case 'input': if (m.i) { const i = m.i; p.input = { u: +!!i.u, d: +!!i.d, l: +!!i.l, r: +!!i.r, a: +i.a || 0, s: +!!i.s, mx: clamp(+i.mx || 0, -1, 1), my: clamp(+i.my || 0, -1, 1) }; if (i.rl) this.reload(p); } break;
-      case 'slot': if (Number.isInteger(m.i) && m.i >= 0 && m.i < 5 && !p.useItem) p.slot = m.i; break;
+      case 'slot': if (Number.isInteger(m.i) && m.i >= 0 && m.i < 5 && !p.useItem && m.i !== p.slot) { p.slot = m.i; p.reloading = null; p.reloadEnd = 0; } break;
       case 'use': this.useConsumable(p); break;
       case 'drop': this.dropSlot(p); break;
       case 'open': this.tryOpenChest(p, m.id); break;
@@ -199,7 +199,18 @@ class Game {
     }
     this.broadcastLobby();
   }
+  checkWinner() {
+    if (this.phase !== 'playing' || this.settings.mode !== 'br') return;
+    const alive = [...this.players.values()].filter((p) => p.alive);
+    const humansAlive = alive.filter((p) => !p.isBot);
+    if (this.players.size > 1 && (alive.length <= 1 || humansAlive.length === 0)) {
+      const winner = alive.length === 1 ? alive[0] : alive.sort((a, b) => b.kills - a.kills)[0] || null;
+      this.phase = 'ending';
+      setTimeout(() => { if (this.phase === 'ending') this.endGame(winner); }, 1500);
+    }
+  }
   endGame(winner) {
+    if (this.phase === 'ended') return;
     this.phase = 'ended'; this.endedAt = now();
     for (const p of this.players.values()) p.question = null;
     const board = [...this.players.values()].map((p) => ({ id: p.id, name: p.name, isBot: p.isBot, color: p.color, kills: p.kills, deaths: p.deaths, correct: p.correct, wrong: p.wrong, alive: p.alive }))
@@ -245,10 +256,11 @@ class Game {
     const a = Math.random() * Math.PI * 2, d = rand(20, 50);
     const pos = { x: clamp(x + Math.cos(a) * d, 30, WORLD - 30), y: clamp(y + Math.sin(a) * d, 30, WORLD - 30) };
     resolveCircle(pos, 12, this.obstacles);
-    this.drops.push({ id: uid(), x: pos.x, y: pos.y, item, at: now() });
+    this.drops.push({ id: uid(), x: pos.x, y: pos.y, item, at: now(), owner: null });
+    if (this.drops.length > 80) this.drops.shift();
   }
   dropAll(p) { for (let i = 0; i < 5; i++) if (p.inv[i]) { this.spawnDrop(p.x, p.y, p.inv[i]); p.inv[i] = null; } }
-  dropSlot(p) { if (!p.alive || p.useItem) return; const it = p.inv[p.slot]; if (!it) return; p.inv[p.slot] = null; this.spawnDrop(p.x, p.y, it); }
+  dropSlot(p) { if (!p.alive || p.useItem) return; const it = p.inv[p.slot]; if (!it) return; p.inv[p.slot] = null; this.spawnDrop(p.x, p.y, it); this.drops[this.drops.length - 1].owner = p.id; }
   // Press E on a drop: take it, swapping with the item in hand when the bag is full.
   tryPickup(p, dropId) {
     if (!p.alive || p.useItem || p.question) return;
@@ -256,7 +268,7 @@ class Game {
     const d = this.drops[i]; if (dist(p.x, p.y, d.x, d.y) > INTERACT_RANGE) return;
     if (this.giveItem(p, d.item)) { this.drops.splice(i, 1); return; }
     const cur = p.inv[p.slot];
-    if (cur) { p.inv[p.slot] = d.item; this.drops.splice(i, 1); this.spawnDrop(d.x, d.y, cur); }
+    if (cur) { p.inv[p.slot] = d.item; this.drops.splice(i, 1); this.spawnDrop(d.x, d.y, cur); this.drops[this.drops.length - 1].owner = p.id; }
   }
 
   // ---------- chests & questions ----------
@@ -269,12 +281,13 @@ class Game {
   tryOpenChest(p, chestId) {
     if (!p.alive || p.question || this.phase !== 'playing') return;
     const c = this.chests.find((c) => c.id === chestId); if (!c) return;
-    if (c.state !== 'closed' || c.busyBy || dist(p.x, p.y, c.x, c.y) > CHEST_RANGE) return;
+    if (c.state !== 'closed' || c.busyBy || (c.lockedUntil || 0) > now() || dist(p.x, p.y, c.x, c.y) > CHEST_RANGE) return;
     const q = maths.generate(this.tierFor(c.rarity), p.name, p.lastTopic);
     p.lastTopic = q.topic;
     c.busyBy = p.id;
-    p.question = { kind: 'chest', chestId: c.id, q, deadline: now() + QUESTION_MS };
-    send(p.ws, { t: 'question', kind: 'chest', chestId: c.id, rarity: c.rarity, topic: q.topic, text: q.text, hint: q.hint, timeLimit: QUESTION_MS });
+    const limit = QUESTION_MS + (q.tier - 1) * 10000;
+    p.question = { kind: 'chest', chestId: c.id, q, deadline: now() + limit };
+    send(p.ws, { t: 'question', kind: 'chest', chestId: c.id, rarity: c.rarity, topic: q.topic, text: q.text, hint: q.hint, timeLimit: limit });
   }
   askRespawn(p) {
     const q = maths.generate(this.settings.difficulty === 'hard' ? 2 : 1, p.name, p.lastTopic);
@@ -294,17 +307,17 @@ class Game {
     this.pushEvent({ k: 'answer', name: p.name, color: p.color, correct, topic: qs.q.topic });
     if (qs.kind === 'chest') {
       const c = this.chests.find((c) => c.id === qs.chestId);
-      let loot = [];
+      let loot = []; const dropped = [];
       if (c) {
         c.busyBy = null;
         if (correct) {
           c.state = 'open'; c.respawnAt = now() + CHEST_RESPAWN_MS;
           loot = makeLoot(c.rarity);
-          for (const it of loot) if (!this.giveItem(p, it)) this.spawnDrop(c.x, c.y, it);
+          for (const it of loot) if (!this.giveItem(p, it)) { this.spawnDrop(c.x, c.y, it); dropped.push(itemName(it)); }
         } else { c.lockedUntil = now() + 4000; }
       }
       p.question = null;
-      send(p.ws, { t: 'result', kind: 'chest', correct, answer: qs.q.display, loot: loot.map(itemName), topic: qs.q.topic });
+      send(p.ws, { t: 'result', kind: 'chest', correct, answer: qs.q.display, loot: loot.map(itemName).filter((n) => !dropped.includes(n)), dropped, topic: qs.q.topic });
     } else {
       send(p.ws, { t: 'result', kind: 'respawn', correct, answer: qs.q.display, topic: qs.q.topic });
       p.question = null;
@@ -321,7 +334,12 @@ class Game {
   // ---------- combat ----------
   reload(p) {
     const w = p.inv[p.slot]; if (!p.alive || !w || w.type !== 'weapon' || p.reloadEnd > now() || w.ammo >= WEAPONS[w.key].mag) return;
-    p.reloadEnd = now() + WEAPONS[w.key].reload;
+    p.reloadEnd = now() + WEAPONS[w.key].reload; p.reloading = w;
+  }
+  finishReload(p, t) {
+    if (!p.reloading || t < p.reloadEnd) return;
+    const w = p.reloading; p.reloading = null;
+    if (p.inv.includes(w)) w.ammo = WEAPONS[w.key].mag;
   }
   useConsumable(p) {
     const it = p.inv[p.slot]; if (!p.alive || !it || it.type !== 'consumable' || p.useItem || p.question) return;
@@ -334,7 +352,7 @@ class Game {
     const def = WEAPONS[w.key];
     if (t < p.lastShot + def.rate || p.reloadEnd > t) return;
     if (w.ammo <= 0) { this.reload(p); return; }
-    w.ammo--; p.lastShot = t;
+    w.ammo--; p.lastShot = t; p.protectUntil = 0;
     this.pushEvent({ k: 'shot', id: p.id, w: w.key });
     for (let i = 0; i < def.pellets; i++) {
       const a = p.angle + (Math.random() - 0.5) * 2 * def.spread;
@@ -352,19 +370,16 @@ class Game {
   kill(victim, attacker, weaponKey) {
     victim.hp = 0; victim.alive = false; victim.deaths++; victim.diedAt = now(); victim.useItem = null;
     if (victim.question && victim.question.chestId) { const c = this.chests.find((c) => c.id === victim.question.chestId); if (c) c.busyBy = null; }
+    if (victim.question) send(victim.ws, { t: 'closeq' });
     victim.question = null;
     this.botReleaseChest(victim);
     this.dropAll(victim);
     if (attacker && attacker !== victim) attacker.kills++;
-    this.pushEvent({ k: 'kill', x: Math.round(victim.x), y: Math.round(victim.y), killer: attacker ? attacker.name : null, killerColor: attacker ? attacker.color : null, victim: victim.name, victimColor: victim.color, weapon: weaponKey ? WEAPONS[weaponKey].name : 'the storm' });
+    this.pushEvent({ k: 'kill', killerId: attacker ? attacker.id : null, victimId: victim.id, x: Math.round(victim.x), y: Math.round(victim.y), killer: attacker ? attacker.name : null, killerColor: attacker ? attacker.color : null, victim: victim.name, victimColor: victim.color, weapon: weaponKey ? WEAPONS[weaponKey].name : 'the storm' });
     if (this.settings.mode === 'dm') {
       if (victim.isBot) setTimeout(() => { if (this.phase === 'playing' && this.players.has(victim.id) && !victim.alive) this.spawn(victim); }, 4000);
       else setTimeout(() => { if (this.phase === 'playing' && this.players.has(victim.id) && !victim.alive && !victim.question) this.askRespawn(victim); }, 2000);
-    } else {
-      victim.spectating = true;
-      const alive = [...this.players.values()].filter((p) => p.alive);
-      if (alive.length <= 1) setTimeout(() => { if (this.phase === 'playing') this.endGame(alive[0] || null); }, 1500);
-    }
+    } else { victim.spectating = true; this.checkWinner(); }
   }
 
   // ---------- bots ----------
@@ -397,11 +412,14 @@ class Game {
       } else st.target = { x: c.x, y: c.y };
     }
     // find enemy
-    let enemy = null, ed = 650;
-    for (const o of this.players.values()) if (o !== b && o.alive && o.protectUntil < t) { const d = dist(b.x, b.y, o.x, o.y); if (d < ed && !lineBlocked(b.x, b.y, o.x, o.y, this.obstacles)) { ed = d; enemy = o; } }
+    const BOT = { easy: { jitter: 0.3, range: 420, react: 700 }, normal: { jitter: 0.18, range: 560, react: 400 }, hard: { jitter: 0.08, range: 650, react: 150 } }[this.settings.difficulty] || { jitter: 0.18, range: 560, react: 400 };
+    let enemy = null, ed = BOT.range;
+    for (const o of this.players.values()) if (o !== b && o.alive && o.protectUntil < t && !o.question) { const d = dist(b.x, b.y, o.x, o.y); if (d < ed && !lineBlocked(b.x, b.y, o.x, o.y, this.obstacles)) { ed = d; enemy = o; } }
+    if (!enemy) st.enemy = null;
     if (enemy && weapon) {
-      const aim = Math.atan2(enemy.y - b.y, enemy.x - b.x) + (Math.random() - 0.5) * 0.18;
-      inp.a = aim; inp.s = 1;
+      if (st.enemy !== enemy.id) { st.enemy = enemy.id; st.enemySince = t; }
+      const aim = Math.atan2(enemy.y - b.y, enemy.x - b.x) + (Math.random() - 0.5) * BOT.jitter * 2;
+      inp.a = aim; inp.s = t - st.enemySince > BOT.react ? 1 : 0;
       const range = WEAPONS[weapon.key].range * 0.6;
       if (st.retarget < t) { st.strafe = Math.random() < 0.5 ? 1 : -1; st.retarget = t + 1200; }
       const side = aim + (Math.PI / 2) * st.strafe;
@@ -411,7 +429,7 @@ class Game {
       return inp;
     }
     if (!weapon || (b.inv.filter(Boolean).length < 3 && Math.random() < 0.01)) {
-      if (!st.chest) { let best = null, bd = 900; for (const c of this.chests) if (c.state === 'closed' && !c.busyBy) { const d = dist(b.x, b.y, c.x, c.y); if (d < bd) { bd = d; best = c; } } if (best) { st.chest = best.id; st.target = { x: best.x, y: best.y }; } }
+      if (!st.chest) { let best = null, bd = 900; for (const c of this.chests) if (c.state === 'closed' && !c.busyBy && (c.lockedUntil || 0) < t) { const d = dist(b.x, b.y, c.x, c.y); if (d < bd) { bd = d; best = c; } } if (best) { st.chest = best.id; st.target = { x: best.x, y: best.y }; } }
     }
     if (!st.target || st.retarget < t || dist(b.x, b.y, st.target.x, st.target.y) < 40) {
       if (!st.chest) { const s = this.freeSpot(40); st.target = s; st.retarget = t + rand(3000, 7000); }
@@ -432,7 +450,7 @@ class Game {
   pushEvent(e) { e.at = now(); this.events.push(e); }
   tick() {
     const t = now(); const dt = Math.min(0.1, (t - this.last) / 1000); this.last = t;
-    if (this.phase !== 'playing') {
+    if (this.phase !== 'playing' && this.phase !== 'ending') {
       if (this.phase === 'ended' && t - this.endedAt > 45000) this.toLobby();
       return;
     }
@@ -441,16 +459,25 @@ class Game {
     if (s) {
       if (s.shrinkEnd && t < s.shrinkEnd) { const f = clamp((t - s.shrinkStart) / (s.shrinkEnd - s.shrinkStart), 0, 1); s.x = s.fromX + (s.tx - s.fromX) * f; s.y = s.fromY + (s.ty - s.fromY) * f; s.r = s.fromR + (s.tr - s.fromR) * f; }
       else if (s.shrinkEnd && t >= s.shrinkEnd) { s.x = s.tx; s.y = s.ty; s.r = s.tr; s.shrinkEnd = 0; s.nextAt = t + 35000; }
-      else if (t >= s.nextAt && s.r > 160) {
-        s.phase++; s.fromX = s.x; s.fromY = s.y; s.fromR = s.r; s.tr = Math.max(150, s.r * 0.58);
+      else if (t >= s.nextAt && s.r > 70) {
+        s.phase++; s.fromX = s.x; s.fromY = s.y; s.fromR = s.r; s.tr = Math.max(60, s.r * 0.58);
         const a = Math.random() * Math.PI * 2, d = Math.random() * (s.r - s.tr) * 0.8; s.tx = clamp(s.x + Math.cos(a) * d, 200, WORLD - 200); s.ty = clamp(s.y + Math.sin(a) * d, 200, WORLD - 200);
         s.shrinkStart = t; s.shrinkEnd = t + 22000;
         this.pushEvent({ k: 'info', msg: 'The storm is closing in!' });
       }
     }
+    // question timeouts (alive or waiting to respawn)
+    for (const p of this.players.values()) {
+      if (p.question && t > p.question.deadline) {
+        const qs = p.question; this.recordAnswer(p, qs.q, false); p.question = null;
+        if (qs.kind === 'chest') { const c = this.chests.find((c) => c.id === qs.chestId); if (c) { c.busyBy = null; c.lockedUntil = t + 4000; } send(p.ws, { t: 'result', kind: 'chest', correct: false, answer: qs.q.display, loot: [], timeout: true, topic: qs.q.topic }); }
+        else { send(p.ws, { t: 'result', kind: 'respawn', correct: false, answer: qs.q.display, timeout: true, topic: qs.q.topic }); setTimeout(() => { if (this.phase === 'playing' && !p.alive && !p.question && this.players.has(p.id)) this.askRespawn(p); }, 2500); }
+      }
+    }
     // players
     for (const p of this.players.values()) {
       if (!p.alive) continue;
+      this.finishReload(p, t);
       if (p.isBot) p.input = this.botThink(p, t, dt);
       const inp = p.input;
       p.angle = inp.a;
@@ -475,18 +502,12 @@ class Game {
         resolveCircle(p, PLAYER_R, this.obstacles);
       }
       // player vs player soft push
-      for (const o of this.players.values()) if (o !== p && o.alive) { const d = dist(p.x, p.y, o.x, o.y); if (d < PLAYER_R * 2 && d > 0.01) { const push = (PLAYER_R * 2 - d) / 2; p.x += ((p.x - o.x) / d) * push; p.y += ((p.y - o.y) / d) * push; } }
+      for (const o of this.players.values()) if (o !== p && o.alive) { const d = dist(p.x, p.y, o.x, o.y); if (d < PLAYER_R * 2 && d > 0.01) { const push = (PLAYER_R * 2 - d) / 2; p.x += ((p.x - o.x) / d) * push; p.y += ((p.y - o.y) / d) * push; resolveCircle(p, PLAYER_R, this.obstacles); } }
       // shooting / using
       if (inp.s && !frozen && !p.useItem) { const it = p.inv[p.slot]; if (it && it.type === 'weapon') this.shoot(p, t); else if (it && it.type === 'consumable' && !p.isBot) this.useConsumable(p); }
-      // question timeout
-      if (p.question && t > p.question.deadline) {
-        const qs = p.question; this.recordAnswer(p, qs.q, false);
-        if (qs.kind === 'chest') { const c = this.chests.find((c) => c.id === qs.chestId); if (c) { c.busyBy = null; c.lockedUntil = t + 4000; } p.question = null; send(p.ws, { t: 'result', kind: 'chest', correct: false, answer: qs.q.display, loot: [], timeout: true, topic: qs.q.topic }); }
-        else { p.question = null; send(p.ws, { t: 'result', kind: 'respawn', correct: false, answer: qs.q.display, timeout: true, topic: qs.q.topic }); setTimeout(() => { if (this.phase === 'playing' && !p.alive && !p.question && this.players.has(p.id)) this.askRespawn(p); }, 2500); }
-      }
       // pickups
       for (let i = this.drops.length - 1; i >= 0; i--) {
-        const d = this.drops[i]; if (t - d.at < 700) continue;
+        const d = this.drops[i]; if (t - d.at < 700 || (d.owner === p.id && t - d.at < 5000)) continue;
         if (dist(p.x, p.y, d.x, d.y) < PICKUP_RANGE) { if (this.giveItem(p, d.item)) this.drops.splice(i, 1); }
       }
       // storm damage
@@ -506,10 +527,12 @@ class Game {
       }
       if (dead) this.bullets.splice(i, 1);
     }
+    // old drops disappear
+    for (let i = this.drops.length - 1; i >= 0; i--) if (t - this.drops[i].at > 90000) this.drops.splice(i, 1);
     // chests respawn
     for (const c of this.chests) if (c.state === 'open' && t >= c.respawnAt) { c.state = 'closed'; c.rarity = rollRarity(); const sp = this.freeSpot(60); c.x = sp.x; c.y = sp.y; c.moved = true; }
     // end of DM timer
-    if (this.settings.mode === 'dm' && t >= this.endsAt) { const best = [...this.players.values()].sort((a, b) => (b.kills - a.kills) || (b.correct - a.correct))[0]; this.endGame(best || null); return; }
+    if (this.settings.mode === 'dm' && t >= this.endsAt && this.phase === 'playing') { const best = [...this.players.values()].sort((a, b) => (b.kills - a.kills) || (b.correct - a.correct))[0]; this.endGame(best || null); return; }
     this.broadcastState(t);
   }
   broadcastState(t) {
@@ -523,10 +546,11 @@ class Game {
     const storm = this.storm ? { x: Math.round(this.storm.x), y: Math.round(this.storm.y), r: Math.round(this.storm.r), tx: Math.round(this.storm.tx), ty: Math.round(this.storm.ty), tr: Math.round(this.storm.tr), shrinking: !!this.storm.shrinkEnd, nextIn: this.storm.shrinkEnd ? 0 : Math.max(0, this.storm.nextAt - t) } : null;
     const alive = [...this.players.values()].filter((p) => p.alive).length;
     const events = this.events; this.events = [];
-    const base = { t: 'state', now: t, players, chests, bullets, drops, storm, alive, timeLeft: this.endsAt ? Math.max(0, this.endsAt - t) : null, events };
+    const shared = JSON.stringify({ t: 'state', now: t, players, chests, bullets, drops, storm, alive, timeLeft: this.endsAt ? Math.max(0, this.endsAt - t) : null, events });
     for (const p of this.humans()) {
-      base.me = { streak: p.streak || 0, inv: p.inv, slot: p.slot, reloadEnd: p.reloadEnd, useEnd: p.useEnd, useStart: p.useItem ? p.useEnd - CONSUMABLES[p.useItem.key].time : 0, spectating: p.spectating };
-      send(p.ws, base);
+      if (!p.ws || p.ws.readyState !== 1) continue;
+      const me = JSON.stringify({ streak: p.streak || 0, inv: p.inv, slot: p.slot, reloadEnd: p.reloadEnd, useEnd: p.useEnd, useStart: p.useItem ? p.useEnd - CONSUMABLES[p.useItem.key].time : 0, spectating: p.spectating });
+      try { p.ws.send(shared.slice(0, -1) + ',"me":' + me + '}'); } catch (e) { /* ignore */ }
     }
     for (const c of this.chests) c.moved = false;
   }

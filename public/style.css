@@ -107,3 +107,7 @@ body.touch #slots .slot { pointer-events: auto; }
 
 #scoreboard { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(10,18,28,.9); border: 2px solid #2c4a6b; border-radius: 14px; padding: 16px 22px; min-width: 360px; pointer-events: none; }
 #scoreboard table { border-collapse: collapse; width: 100%; } #scoreboard th, #scoreboard td { padding: 6px 10px; text-align: left; border-bottom: 1px solid #2c4a6b; } #scoreboard th { color: #9fb3c8; font-size: 12px; } #scoreboard tr.me td { color: #ffd34d; font-weight: 700; }
+
+/* result-only state: let the player move while the answer shows */
+#question.resultOnly { background: none; pointer-events: none; align-items: flex-start; padding-top: 12vh; }
+#question.resultOnly .card { pointer-events: none; }
