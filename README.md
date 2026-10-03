@@ -80,6 +80,10 @@ It prints a temporary public address you can share. Your computer has to stay on
 - Guns, healing items and how often each chest colour appears are in `server/items.js`.
 - Game numbers (time to answer, match length, storm timing, chest count) are at the top of `server/game.js`.
 
+## Updates
+
+Every change pushed to this repository is deployed to Render automatically through the GitHub Action in `.github/workflows/deploy.yml`.
+
 ## Tests
 
 ```
