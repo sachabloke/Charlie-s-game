@@ -108,3 +108,17 @@ test('reloading refills the magazine', () => {
   assert.strictEqual(w.ammo, 12, 'pistol magazine refilled');
   g.removePlayer(p.id);
 });
+
+test('sums adapt: three right steps the level up, two wrong steps it down, weak topics are targeted', () => {
+  const g = new Game('AD', () => {}); clearInterval(g.timer);
+  const ws = fakeWs(); const p = g.addHuman(ws, 'Charlie');
+  for (let i = 0; i < 3; i++) g.recordAnswer(p, { topic: 'Times tables' }, true);
+  assert.strictEqual(p.level, 1); assert.strictEqual(g.tierFor('common', p), 2);
+  for (let i = 0; i < 4; i++) g.recordAnswer(p, { topic: 'Fractions' }, false);
+  assert.strictEqual(p.level, -1); assert.strictEqual(g.tierFor('legendary', p), 3);
+  assert.deepStrictEqual(g.weakTopics(p), ['Fractions']);
+  const maths = require('../server/maths');
+  let hits = 0; for (let i = 0; i < 300; i++) if (maths.generate(2, 'C', null, ['Equivalent fractions']).topic === 'Equivalent fractions') hits++;
+  assert.ok(hits > 80, `weak topic should come up often, got ${hits}/300`);
+  g.removePlayer(p.id);
+});

@@ -108,6 +108,7 @@ class Game {
       inv: [null, null, null, null, null], slot: 0, lastShot: 0, reloadEnd: 0, useEnd: 0, useItem: null,
       input: { u: 0, d: 0, l: 0, r: 0, a: 0, s: 0 },
       question: null, kills: 0, deaths: 0, correct: 0, wrong: 0, byTopic: {}, protectUntil: 0, diedAt: 0, lastTopic: null,
+      level: 0, runRight: 0, runWrong: 0, history: {}, // adaptive difficulty, kept across rounds
       bot: null, stormDamageAcc: 0,
     };
   }
@@ -215,8 +216,8 @@ class Game {
     for (const p of this.players.values()) p.question = null;
     const board = [...this.players.values()].map((p) => ({ id: p.id, name: p.name, isBot: p.isBot, color: p.color, kills: p.kills, deaths: p.deaths, correct: p.correct, wrong: p.wrong, alive: p.alive }))
       .sort((a, b) => (b.kills - a.kills) || (b.correct - a.correct));
-    const reports = {}; for (const p of this.humans()) reports[p.id] = p.byTopic;
-    this.lastGameOver = { t: 'gameover', winner: winner ? { id: winner.id, name: winner.name } : null, board, reports, hostId: this.hostId };
+    const reports = {}, focus = {}; for (const p of this.humans()) { reports[p.id] = p.byTopic; focus[p.id] = this.weakTopics(p).slice(0, 3); }
+    this.lastGameOver = { t: 'gameover', winner: winner ? { id: winner.id, name: winner.name } : null, board, reports, focus, hostId: this.hostId };
     for (const p of this.humans()) send(p.ws, this.lastGameOver);
   }
 
@@ -272,17 +273,19 @@ class Game {
   }
 
   // ---------- chests & questions ----------
-  tierFor(rarity) {
+  tierFor(rarity, p = null) {
     let t = RARITY_INFO[rarity].tier;
     if (this.settings.difficulty === 'easy') t = Math.max(1, t - 1);
     if (this.settings.difficulty === 'hard') t = Math.min(4, t + 1);
-    return t;
+    if (p) t += p.level || 0;
+    return Math.min(4, Math.max(1, t));
   }
+  weakTopics(p) { return Object.entries(p.history || {}).filter(([, v]) => v.wrong > v.right).map(([k]) => k); }
   tryOpenChest(p, chestId) {
     if (!p.alive || p.question || this.phase !== 'playing') return;
     const c = this.chests.find((c) => c.id === chestId); if (!c) return;
     if (c.state !== 'closed' || c.busyBy || (c.lockedUntil || 0) > now() || dist(p.x, p.y, c.x, c.y) > CHEST_RANGE) return;
-    const q = maths.generate(this.tierFor(c.rarity), p.name, p.lastTopic);
+    const q = maths.generate(this.tierFor(c.rarity, p), p.name, p.lastTopic, this.weakTopics(p));
     p.lastTopic = q.topic;
     c.busyBy = p.id;
     const limit = QUESTION_MS + (q.tier - 1) * 10000;
@@ -290,12 +293,15 @@ class Game {
     send(p.ws, { t: 'question', kind: 'chest', chestId: c.id, rarity: c.rarity, topic: q.topic, text: q.text, hint: q.hint, timeLimit: limit });
   }
   askRespawn(p) {
-    const q = maths.generate(this.settings.difficulty === 'hard' ? 2 : 1, p.name, p.lastTopic);
+    const q = maths.generate(Math.min(4, Math.max(1, (this.settings.difficulty === 'hard' ? 2 : 1) + Math.max(0, p.level || 0))), p.name, p.lastTopic, this.weakTopics(p));
     p.lastTopic = q.topic;
     p.question = { kind: 'respawn', q, deadline: now() + QUESTION_MS * 2 };
     send(p.ws, { t: 'question', kind: 'respawn', rarity: 'common', topic: q.topic, text: q.text, hint: q.hint, timeLimit: QUESTION_MS * 2 });
   }
   recordAnswer(p, q, correct) {
+    const h = (p.history[q.topic] ||= { right: 0, wrong: 0 }); if (correct) h.right++; else h.wrong++;
+    if (correct) { p.runRight++; p.runWrong = 0; if (p.runRight >= 3 && p.level < 1) { p.level++; p.runRight = 0; send(p.ws, { t: 'toast', msg: '📈 Nice! Your sums are getting harder (and the loot better).' }); } }
+    else { p.runWrong++; p.runRight = 0; if (p.runWrong >= 2 && p.level > -1) { p.level--; p.runWrong = 0; send(p.ws, { t: 'toast', msg: '📉 No worries, the next sums will be a bit easier.' }); } }
     if (correct) { p.correct++; p.streak = (p.streak || 0) + 1; if (p.streak % 3 === 0 && p.alive) { p.shield = Math.min(100, p.shield + 25); this.pushEvent({ k: 'info', msg: `🔥 ${p.name} is on a ${p.streak}-sum streak! +25 shield` }); } }
     else { p.wrong++; p.streak = 0; }
     const t = (p.byTopic[q.topic] ||= { right: 0, wrong: 0 }); if (correct) t.right++; else t.wrong++;

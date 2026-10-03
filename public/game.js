@@ -99,6 +99,7 @@ function handle(m) {
     case 'result': onResult(m); break;
     case 'gameover': phase = 'ended'; showGameOver(m); break;
     case 'closeq': hideQuestion(); break;
+    case 'toast': toast(m.msg, 3000); break;
   }
 }
 const myName = () => { const p = S && S.players.find((p) => p.id === myId); return p ? p.n : ''; };
@@ -158,6 +159,7 @@ function showGameOver(m) {
   const topics = rep ? Object.entries(rep).sort((a, b) => (b[1].wrong - a[1].wrong) || (b[1].right - a[1].right)) : [];
   if (!topics.length) r += '<div class="muted">No sums answered this game. Open some chests!</div>';
   for (const [topic, s] of topics) r += `<div class="topic"><span>${esc(topic)}</span><span><span class="good">${s.right} right</span> · <span class="bad">${s.wrong} wrong</span></span></div>`;
+  const focus = (m.focus && m.focus[myId]) || []; if (focus.length) r += `<div class="muted" style="margin-top:8px">🎯 Next game will practise: <b>${focus.map(esc).join(', ')}</b></div>`;
   $('report').innerHTML = r;
   $('lobbyBtn').classList.toggle('hidden', m.hostId !== myId); $('goWait').classList.toggle('hidden', m.hostId === myId);
   $('gameover').classList.remove('hidden');

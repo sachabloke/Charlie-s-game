@@ -262,11 +262,13 @@ def(4, 'Money problems', (name) => {
 });
 
 // ---------------- public API ----------------
-function generate(tier, name = 'Charlie', avoidTopic = null) {
+// preferTopics: topics the player struggles with; one is chosen (when it exists at this tier) about 40% of the time.
+function generate(tier, name = 'Charlie', avoidTopic = null, preferTopics = []) {
   tier = Math.min(4, Math.max(1, tier));
   let list = TOPICS[tier];
   if (avoidTopic && list.length > 1) list = list.filter((t) => t.topic !== avoidTopic);
-  const t = pick(list);
+  const weak = list.filter((t) => preferTopics.includes(t.topic));
+  const t = weak.length && Math.random() < 0.4 ? pick(weak) : pick(list);
   const q = t.fn(name);
   return { topic: t.topic, tier, text: q.text, kind: q.kind, answer: q.answer, display: q.display, hint: q.hint || null };
 }
