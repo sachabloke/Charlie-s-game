@@ -1,0 +1,16 @@
+# Pokes Render to deploy the latest version every time the game is updated.
+# Needs one repository secret called RENDER_DEPLOY_HOOK (the Deploy Hook URL from Render's Settings page).
+name: Deploy to Render
+on:
+  push:
+    branches: [master]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then echo "RENDER_DEPLOY_HOOK secret not set yet; skipping."; exit 0; fi
+          curl -fsS -X POST "$HOOK" && echo "Render deploy triggered."
