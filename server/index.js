@@ -8,7 +8,7 @@ const { Game } = require('./game');
 
 const PORT = process.env.PORT || 3000;
 const app = express();
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.static(path.join(__dirname, '..', 'public'), { etag: true, lastModified: true, setHeaders: (res, filePath) => { res.setHeader('Cache-Control', /vendor/.test(filePath) ? 'public, max-age=86400' : 'no-cache'); } }));
 app.get('/health', (_req, res) => res.json({ ok: true, rooms: rooms.size }));
 
 const server = http.createServer(app);
