@@ -336,25 +336,29 @@
     ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 3; ctx.strokeRect(o.x - 4, o.y - 4, o.w + 8, o.h + 8);
   }
   function drawTree(o, now) {
-    const h1 = hash(o.x, o.y), h2 = hash(o.y, o.x);
-    const sway = Math.sin(now / 900 + h1 * 6) * 2;
-    ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.beginPath(); ctx.ellipse(o.x + o.r * 0.35, o.y + o.r * 0.45, o.r * 1.05, o.r * 0.8, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#5d4037'; circle(o.x, o.y, o.r * 0.3);
-    const dark = h2 < 0.5 ? '#2e7d32' : '#1b5e20', mid = h2 < 0.5 ? '#43a047' : '#2e7d32', light = h2 < 0.5 ? '#66bb6a' : '#4caf50';
-    ctx.fillStyle = dark;
-    for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2 + h1 * 3; circle(o.x + sway + Math.cos(a) * o.r * 0.45, o.y + Math.sin(a) * o.r * 0.45, o.r * 0.6); }
-    ctx.fillStyle = mid; circle(o.x + sway - o.r * 0.1, o.y - o.r * 0.1, o.r * 0.75);
-    ctx.fillStyle = light; circle(o.x + sway - o.r * 0.3, o.y - o.r * 0.32, o.r * 0.38);
-    ctx.fillStyle = 'rgba(255,255,255,0.25)'; circle(o.x + sway - o.r * 0.4, o.y - o.r * 0.45, o.r * 0.14);
+    // Roblox-style blocky tree: square canopy layers on a square trunk
+    const h1 = hash(o.x, o.y), h2 = hash(o.y, o.x); const r = o.r; const sway = Math.sin(now / 900 + h1 * 6) * 1.5;
+    ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(o.x - r * 0.8 + 10, o.y - r * 0.8 + 12, r * 1.6, r * 1.6);
+    ctx.fillStyle = '#6d4c41'; ctx.fillRect(o.x - r * 0.25, o.y - r * 0.25, r * 0.5, r * 0.5);
+    const pal = h2 < 0.5 ? ['#2e7d32', '#43a047', '#7cb342'] : ['#1b5e20', '#2e7d32', '#558b2f'];
+    ctx.save(); ctx.translate(o.x + sway, o.y); ctx.rotate(h1 * 0.6 - 0.3);
+    ctx.fillStyle = pal[0]; ctx.fillRect(-r * 0.95, -r * 0.95, r * 1.9, r * 1.9);
+    ctx.fillStyle = pal[1]; ctx.fillRect(-r * 0.7, -r * 0.7, r * 1.4, r * 1.4);
+    ctx.fillStyle = pal[2]; ctx.fillRect(-r * 0.4, -r * 0.4, r * 0.8, r * 0.8);
+    ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillRect(-r * 0.4, -r * 0.4, r * 0.3, r * 0.3);
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 3; ctx.strokeRect(-r * 0.95, -r * 0.95, r * 1.9, r * 1.9);
+    ctx.restore();
   }
   function drawRock(o) {
-    const pts = []; for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; const r = o.r * (0.8 + hash(o.x + i, o.y - i) * 0.3); pts.push([o.x + Math.cos(a) * r, o.y + Math.sin(a) * r]); }
-    const poly = (dx, dy, scale) => { ctx.beginPath(); pts.forEach(([x, y], i) => { const px = o.x + (x - o.x) * scale + dx, py = o.y + (y - o.y) * scale + dy; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }); ctx.closePath(); };
-    ctx.fillStyle = 'rgba(0,0,0,0.28)'; poly(7, 8, 1); ctx.fill();
-    ctx.fillStyle = '#6b7b80'; poly(0, 0, 1); ctx.fill();
-    ctx.fillStyle = '#8fa0a6'; poly(-o.r * 0.12, -o.r * 0.14, 0.72); ctx.fill();
-    ctx.fillStyle = '#b4c2c7'; poly(-o.r * 0.25, -o.r * 0.28, 0.4); ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 3; poly(0, 0, 1); ctx.stroke();
+    // blocky boulder: a tilted cube seen from above
+    const r = o.r, a = hash(o.x, o.y) * 0.8 - 0.4;
+    ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(a);
+    ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(-r * 0.85 + 8, -r * 0.75 + 10, r * 1.7, r * 1.5);
+    ctx.fillStyle = '#6b7b80'; ctx.fillRect(-r * 0.85, -r * 0.75, r * 1.7, r * 1.5);
+    ctx.fillStyle = '#8fa0a6'; ctx.fillRect(-r * 0.65, -r * 0.6, r * 1.3, r * 1.1);
+    ctx.fillStyle = '#b4c2c7'; ctx.fillRect(-r * 0.55, -r * 0.5, r * 0.5, r * 0.4);
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 3; ctx.strokeRect(-r * 0.85, -r * 0.75, r * 1.7, r * 1.5);
+    ctx.restore();
   }
   function drawChest(pos, rar, state, now) {
     const col = RCOLOR[rar], open = state === 1, tier = RARITY.indexOf(rar);
@@ -373,45 +377,47 @@
     if (state === 3) { ctx.font = '20px serif'; ctx.textAlign = 'center'; ctx.fillText('🔒', 0, -26); }
     ctx.restore();
   }
-  const HATS = ['cap', 'beanie', 'headband', 'helmet', 'bandana', 'crown', 'none', 'bucket'];
+  const HATS = ['cap', 'tophat', 'headband', 'helmet', 'bandana', 'crown', 'none', 'bucket'];
   const hatOf = (p) => HATS[Math.floor(hash(p.id.charCodeAt(0) * 31 + (p.id.charCodeAt(1) || 7), p.id.length) * HATS.length)];
   function drawPlayer(p, v, now) {
+    // Roblox-style blocky avatar seen from above: square head, block torso, block arms
     ctx.save(); ctx.translate(v.x, v.y);
-    const moving = Math.hypot(p.x - v.x, p.y - v.y) > 1.5; const bob = moving ? Math.sin(now / 90) * 1.5 : 0;
+    const moving = Math.hypot(p.x - v.x, p.y - v.y) > 1.5; const swing = moving ? Math.sin(now / 110) * 5 : 0;
     if (p.pr) { ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 3; ctx.setLineDash([7, 7]); ctx.beginPath(); ctx.arc(0, 0, PLAYER_R + 10, now / 250, now / 250 + Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); }
-    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(5, 7, PLAYER_R + 2, PLAYER_R * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; roundRect(-PLAYER_R + 6, -PLAYER_R + 8, PLAYER_R * 2, PLAYER_R * 2, 5); ctx.fill();
     ctx.rotate(v.a);
-    const skin = '#f1c27d', col = p.c, dark = shade(col, -60);
+    const skin = '#f5c86a', col = p.c, dark = shade(col, -60), outline = 'rgba(0,0,0,0.5)';
+    ctx.lineWidth = 2.5; ctx.strokeStyle = outline;
     // backpack
-    ctx.fillStyle = dark; roundRect(-27, -11, 12, 22, 4); ctx.fill(); ctx.fillStyle = shade(col, -30); roundRect(-25, -8, 8, 16, 3); ctx.fill();
-    // body / shoulders
-    const grd = ctx.createRadialGradient(-6, -6, 4, 0, 0, PLAYER_R + 2); grd.addColorStop(0, shade(col, 40)); grd.addColorStop(1, col);
-    ctx.fillStyle = grd; circle(0, bob * 0.3, PLAYER_R);
-    ctx.strokeStyle = p.id === myId ? '#fff' : 'rgba(0,0,0,0.55)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, bob * 0.3, PLAYER_R, 0, Math.PI * 2); ctx.stroke();
-    // arms
-    ctx.fillStyle = skin; circle(13, -10 + bob, 5.5); circle(17, 7 - bob, 5.5);
+    ctx.fillStyle = dark; roundRect(-27, -10, 10, 20, 3); ctx.fill(); ctx.stroke();
+    // torso block
+    const grd = ctx.createLinearGradient(-16, -18, 16, 18); grd.addColorStop(0, shade(col, 35)); grd.addColorStop(1, col);
+    ctx.fillStyle = grd; roundRect(-16, -18, 32, 36, 4); ctx.fill(); ctx.strokeStyle = p.id === myId ? '#fff' : outline; ctx.lineWidth = p.id === myId ? 3 : 2.5; ctx.stroke(); ctx.strokeStyle = outline; ctx.lineWidth = 2.5;
+    // arms (blocks) swinging, holding the gun forward
+    ctx.fillStyle = skin; roundRect(-4 + swing * 0.3, -27, 20, 9, 3); ctx.fill(); ctx.stroke(); roundRect(-4 - swing * 0.3, 18, 20, 9, 3); ctx.fill(); ctx.stroke();
     // gun
     if (p.w && WNAME[p.w]) drawGun(p.w, p.wr || 'common', (flashes.get(p.id) || 0) > now - 70);
     else if (p.w) { ctx.font = '18px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(CICON[p.w] || '', 24, 0); ctx.textBaseline = 'alphabetic'; }
-    // head + hat
-    ctx.fillStyle = skin; circle(0, 0, 12);
+    // head block with a face on the front edge
+    ctx.fillStyle = skin; roundRect(-11, -11, 22, 22, 4); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#222'; ctx.fillRect(6, -7, 3, 4); ctx.fillRect(6, 3, 3, 4); ctx.fillStyle = '#c0392b'; ctx.fillRect(9, -2, 2, 4);
     const hat = hatOf(p);
-    if (hat === 'cap') { ctx.fillStyle = dark; circle(0, 0, 12.5); ctx.fillStyle = shade(col, -20); roundRect(6, -9, 12, 18, 5); ctx.fill(); }
-    else if (hat === 'beanie') { ctx.fillStyle = '#d63031'; circle(0, 0, 12.5); ctx.fillStyle = '#ff7675'; circle(0, 0, 4); }
-    else if (hat === 'headband') { ctx.fillStyle = '#4b2e13'; circle(0, 0, 12); ctx.fillStyle = col; ctx.fillRect(-12, -3, 24, 6); }
-    else if (hat === 'helmet') { ctx.fillStyle = '#2d3436'; circle(0, 0, 13); ctx.fillStyle = '#74b9ff'; roundRect(5, -8, 8, 16, 3); ctx.fill(); }
-    else if (hat === 'bandana') { ctx.fillStyle = '#6c5ce7'; circle(0, 0, 12.5); ctx.fillStyle = '#a29bfe'; ctx.fillRect(-16, -2, 10, 4); }
-    else if (hat === 'crown') { ctx.fillStyle = '#e8a33d'; circle(0, 0, 12.5); ctx.fillStyle = '#ffd34d'; ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; const r = i % 2 ? 7 : 12; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); ctx.fill(); }
-    else if (hat === 'bucket') { ctx.fillStyle = '#b2bec3'; circle(0, 0, 14); ctx.fillStyle = '#636e72'; circle(0, 0, 9); }
-    else { ctx.fillStyle = '#3d2314'; circle(-2, 0, 10); ctx.fillStyle = skin; circle(5, 0, 8); }
+    if (hat === 'cap') { ctx.fillStyle = dark; roundRect(-11, -11, 18, 22, 4); ctx.fill(); ctx.fillRect(-11, -8, 14, 16); ctx.fillStyle = shade(col, -20); roundRect(-18, -8, 8, 16, 2); ctx.fill(); }
+    else if (hat === 'tophat') { ctx.fillStyle = '#111'; roundRect(-13, -13, 20, 26, 3); ctx.fill(); ctx.fillStyle = '#c0392b'; ctx.fillRect(-13, -4, 20, 8); }
+    else if (hat === 'headband') { ctx.fillStyle = col; ctx.fillRect(-11, -4, 16, 8); ctx.fillStyle = '#fff'; ctx.fillRect(-11, -1, 16, 2); }
+    else if (hat === 'helmet') { ctx.fillStyle = '#2d3436'; roundRect(-12, -12, 20, 24, 5); ctx.fill(); ctx.fillStyle = '#74b9ff'; ctx.fillRect(4, -9, 5, 18); }
+    else if (hat === 'bandana') { ctx.fillStyle = '#6c5ce7'; ctx.fillRect(-11, -11, 16, 22); ctx.fillStyle = '#a29bfe'; ctx.fillRect(-19, -3, 9, 5); }
+    else if (hat === 'crown') { ctx.fillStyle = '#ffd34d'; ctx.beginPath(); for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2 + Math.PI / 8; const r = i % 2 ? 7 : 13; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#e84393'; ctx.fillRect(-2, -2, 4, 4); }
+    else if (hat === 'bucket') { ctx.fillStyle = '#b2bec3'; roundRect(-14, -14, 26, 28, 6); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#636e72'; roundRect(-9, -9, 16, 18, 3); ctx.fill(); }
+    else { ctx.fillStyle = '#4e342e'; roundRect(-12, -12, 14, 24, 4); ctx.fill(); }
     ctx.rotate(-v.a);
     // name tag + bars
     ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
-    const tw = ctx.measureText(p.n).width + 14; ctx.fillStyle = 'rgba(0,0,0,0.55)'; roundRect(-tw / 2, -50, tw, 18, 6); ctx.fill(); ctx.fillStyle = p.id === myId ? '#ffd34d' : '#fff'; ctx.fillText(p.n, 0, -37);
-    ctx.fillStyle = 'rgba(0,0,0,0.6)'; roundRect(-27, -31, 54, 8, 3); ctx.fill(); ctx.fillStyle = p.hp > 35 ? '#2ed573' : '#ff6b6b'; roundRect(-26, -30, 52 * p.hp / 100, 6, 2); ctx.fill();
-    if (p.sh > 0) { ctx.fillStyle = 'rgba(0,0,0,0.6)'; roundRect(-27, -25, 54, 5, 2); ctx.fill(); ctx.fillStyle = '#3b9dff'; roundRect(-26, -24, 52 * p.sh / 100, 3, 1); ctx.fill(); }
-    if (p.q) { ctx.font = '22px serif'; ctx.fillText('🤔', 0, -56); }
-    if (p.u) { ctx.font = '16px serif'; ctx.fillText('💊', 26, -22); }
+    const tw = ctx.measureText(p.n).width + 14; ctx.fillStyle = 'rgba(0,0,0,0.55)'; roundRect(-tw / 2, -54, tw, 18, 6); ctx.fill(); ctx.fillStyle = p.id === myId ? '#ffd34d' : '#fff'; ctx.fillText(p.n, 0, -41);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; roundRect(-27, -35, 54, 8, 3); ctx.fill(); ctx.fillStyle = p.hp > 35 ? '#2ed573' : '#ff6b6b'; roundRect(-26, -34, 52 * p.hp / 100, 6, 2); ctx.fill();
+    if (p.sh > 0) { ctx.fillStyle = 'rgba(0,0,0,0.6)'; roundRect(-27, -29, 54, 5, 2); ctx.fill(); ctx.fillStyle = '#3b9dff'; roundRect(-26, -28, 52 * p.sh / 100, 3, 1); ctx.fill(); }
+    if (p.q) { ctx.font = '22px serif'; ctx.fillText('🤔', 0, -60); }
+    if (p.u) { ctx.font = '16px serif'; ctx.fillText('💊', 28, -26); }
     ctx.restore();
   }
 
