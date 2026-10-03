@@ -56,7 +56,7 @@
   function handle(m) {
     switch (m.t) {
       case 'error': $('joinErr').textContent = m.msg; $('joinBtn').disabled = false; if (phase === 'join') { try { ws.close(); } catch (e) {} } break;
-      case 'joined': myId = m.id; room = m.room; $('roomCode').textContent = room; break;
+      case 'joined': myId = m.id; room = m.room; $('roomCode').textContent = room; sendSkin(); break;
       case 'lobby': hostId = m.hostId; renderLobby(m); if (m.phase === 'lobby') { phase = 'lobby'; showScreen('lobby'); hideQuestion(); $('gameover').classList.add('hidden'); } break;
       case 'world': world = { size: m.size, obstacles: m.obstacles, chests: new Map(m.chests.map((c) => [c.id, { x: c.x, y: c.y }])), mode: m.mode }; view.clear(); particles = []; feedItems = []; phase = 'playing'; showScreen('game'); hideQuestion(); $('gameover').classList.add('hidden'); if (document.activeElement) document.activeElement.blur(); canvas.focus(); window.focus(); toast(m.mode === 'br' ? 'Find a chest and answer the sum to get a gun!' : 'Fight! Open chests for better guns.', 3500); break;
       case 'state': onState(m); break;
@@ -97,6 +97,20 @@
     $('lobby').classList.toggle('hidden', name !== 'lobby');
     $('hud').classList.toggle('hidden', name !== 'game');
   }
+  const SKIN_COLORS = ['#3b9dff', '#ff5e7e', '#ffd32a', '#2ed573', '#ff9f43', '#c56cf0', '#18dcff', '#f368e0', '#ff4757', '#7bed9f', '#ffffff', '#2f3542'];
+  let mySkin = { hat: localStorage.getItem('mr_hat') || 'cap', color: localStorage.getItem('mr_color') || '#3b9dff' };
+  if (!SKIN_COLORS.includes(mySkin.color)) mySkin.color = '#3b9dff';
+  function sendSkin() { localStorage.setItem('mr_hat', mySkin.hat); localStorage.setItem('mr_color', mySkin.color); send({ t: 'skin', hat: mySkin.hat, color: mySkin.color }); renderSkinPicker(); }
+  function renderSkinPicker() {
+    $('hatRow').innerHTML = HATS.map((h) => `<button class="pick${h === mySkin.hat ? ' on' : ''}" data-hat="${h}">${HAT_NAMES[h]}</button>`).join('');
+    $('colorRow').innerHTML = SKIN_COLORS.map((c) => `<button class="swatch${c === mySkin.color ? ' on' : ''}" data-color="${c}" style="background:${c}"></button>`).join('');
+    const pc = $('preview'); const g = pc.getContext('2d'); g.clearRect(0, 0, pc.width, pc.height);
+    const saved = ctx; ctx = g; ctx.save(); ctx.translate(pc.width / 2, pc.height / 2 + 6); ctx.scale(2.2, 2.2);
+    drawPlayer({ id: myId || 'me', n: '', c: mySkin.color, h: mySkin.hat, x: 0, y: 0, a: -Math.PI / 2, hp: 100, sh: 0, al: 1, w: 'rifle', wr: 'legendary', q: 0, u: 0, pr: 0 }, { x: 0, y: 0, a: -Math.PI / 2 }, performance.now());
+    ctx.restore(); ctx = saved;
+  }
+  $('hatRow').addEventListener('click', (e) => { const b = e.target.closest('[data-hat]'); if (b) { mySkin.hat = b.dataset.hat; sfx('pickup'); sendSkin(); } });
+  $('colorRow').addEventListener('click', (e) => { const b = e.target.closest('[data-color]'); if (b) { mySkin.color = b.dataset.color; sfx('pickup'); sendSkin(); } });
   function renderLobby(m) {
     const list = $('playerList'); list.innerHTML = '';
     for (const p of m.players) { const li = document.createElement('li'); li.innerHTML = `<span class="dot" style="background:${p.color}"></span>${esc(p.name)}${p.id === myId ? ' (you)' : ''}${p.id === m.hostId ? '<span class="tag">HOST</span>' : ''}${p.isBot ? '<span class="tag">BOT</span>' : ''}`; list.appendChild(li); }
@@ -262,7 +276,7 @@
   $('lobbyBtn').addEventListener('click', () => send({ t: 'lobby' }));
 
   // ---------- rendering ----------
-  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; zoom = Math.max(0.65, Math.min(1.1, Math.min(canvas.width / 1500, canvas.height / 850))); }
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; zoom = Math.max(0.8, Math.min(1.45, Math.min(canvas.width / 1150, canvas.height / 650))); }
   window.addEventListener('resize', resize); resize();
 
   const hash = (x, y) => { let h = (Math.round(x) * 374761393 + Math.round(y) * 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
@@ -384,8 +398,9 @@
     if (state === 3) { ctx.font = '20px serif'; ctx.textAlign = 'center'; ctx.fillText('🔒', 0, -26); }
     ctx.restore();
   }
-  const HATS = ['cap', 'tophat', 'headband', 'helmet', 'bandana', 'crown', 'none', 'bucket'];
-  const hatOf = (p) => HATS[Math.floor(hash(p.id.charCodeAt(0) * 31 + (p.id.charCodeAt(1) || 7), p.id.length) * HATS.length)];
+  const HATS = ['cap', 'tophat', 'headband', 'helmet', 'bandana', 'crown', 'none', 'bucket', 'cat', 'viking'];
+  const HAT_NAMES = { cap: 'Cap', tophat: 'Top hat', headband: 'Headband', helmet: 'Helmet', bandana: 'Bandana', crown: 'Crown', none: 'Hair', bucket: 'Bucket', cat: 'Cat ears', viking: 'Viking' };
+  const hatOf = (p) => p.h || p.hat || 'cap';
   function drawPlayer(p, v, now) {
     // Roblox-style blocky avatar seen from above: square head, block torso, block arms
     ctx.save(); ctx.translate(v.x, v.y);
@@ -416,10 +431,13 @@
     else if (hat === 'bandana') { ctx.fillStyle = '#6c5ce7'; ctx.fillRect(-11, -11, 16, 22); ctx.fillStyle = '#a29bfe'; ctx.fillRect(-19, -3, 9, 5); }
     else if (hat === 'crown') { ctx.fillStyle = '#ffd34d'; ctx.beginPath(); for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2 + Math.PI / 8; const r = i % 2 ? 7 : 13; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#e84393'; ctx.fillRect(-2, -2, 4, 4); }
     else if (hat === 'bucket') { ctx.fillStyle = '#b2bec3'; roundRect(-14, -14, 26, 28, 6); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#636e72'; roundRect(-9, -9, 16, 18, 3); ctx.fill(); }
+    else if (hat === 'cat') { ctx.fillStyle = '#ff9f43'; roundRect(-11, -11, 18, 22, 4); ctx.fill(); for (const sy of [-1, 1]) { ctx.beginPath(); ctx.moveTo(-10, sy * 10); ctx.lineTo(-4, sy * 20); ctx.lineTo(2, sy * 10); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffc9a3'; ctx.beginPath(); ctx.moveTo(-8, sy * 11); ctx.lineTo(-4, sy * 17); ctx.lineTo(0, sy * 11); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#ff9f43'; } }
+    else if (hat === 'viking') { ctx.fillStyle = '#95a5a6'; roundRect(-12, -12, 20, 24, 5); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ecf0f1'; for (const sy of [-1, 1]) { ctx.beginPath(); ctx.moveTo(-6, sy * 11); ctx.quadraticCurveTo(-6, sy * 24, 4, sy * 22); ctx.quadraticCurveTo(-1, sy * 18, 0, sy * 11); ctx.closePath(); ctx.fill(); ctx.stroke(); } ctx.fillStyle = '#7f8c8d'; ctx.fillRect(-12, -2, 20, 4); }
     else { ctx.fillStyle = '#4e342e'; roundRect(-12, -12, 14, 24, 4); ctx.fill(); }
     ctx.rotate(-v.a);
     // name tag + bars
     ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+    if (!p.n) { ctx.restore(); return; }
     const tw = ctx.measureText(p.n).width + 14; ctx.fillStyle = 'rgba(0,0,0,0.55)'; roundRect(-tw / 2, -54, tw, 18, 6); ctx.fill(); ctx.fillStyle = p.id === myId ? '#ffd34d' : '#fff'; ctx.fillText(p.n, 0, -41);
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; roundRect(-27, -35, 54, 8, 3); ctx.fill(); ctx.fillStyle = p.hp > 35 ? '#2ed573' : '#ff6b6b'; roundRect(-26, -34, 52 * p.hp / 100, 6, 2); ctx.fill();
     if (p.sh > 0) { ctx.fillStyle = 'rgba(0,0,0,0.6)'; roundRect(-27, -29, 54, 5, 2); ctx.fill(); ctx.fillStyle = '#3b9dff'; roundRect(-26, -28, 52 * p.sh / 100, 3, 1); ctx.fill(); }

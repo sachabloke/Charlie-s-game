@@ -85,3 +85,12 @@ body.touch #slots .slot { pointer-events: auto; }
 }
 #rotateHint { display: none; position: fixed; inset: 0; z-index: 20; background: #101a26; color: #fff; align-items: center; justify-content: center; text-align: center; font-size: 22px; font-weight: 800; padding: 20px; }
 @media (orientation: portrait) and (max-width: 600px) { body.touch #rotateHint { display: flex; } }
+
+/* Skin picker */
+#skin { display: flex; gap: 14px; align-items: flex-start; background: #0f1821; border-radius: 10px; padding: 10px; }
+#preview { background: #3f7a3a; border-radius: 10px; flex-shrink: 0; }
+.pickrow { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+.pick { background: #1f3247; color: #fff; border: 2px solid transparent; border-radius: 8px; padding: 5px 9px; font-size: 13px; cursor: pointer; }
+.pick.on { border-color: #ffd34d; background: #2c4a6b; }
+.swatch { width: 28px; height: 28px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
+.swatch.on { border-color: #fff; box-shadow: 0 0 0 2px #ffd34d; }

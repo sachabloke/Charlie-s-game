@@ -17,7 +17,8 @@ const MAX_PLAYERS = 8;
 const SPAWN_PROTECT_MS = 3000;
 const BOT_NAMES = ['Bot Alex', 'Bot Maya', 'Bot Zed', 'Bot Pip', 'Bot Rex', 'Bot Ivy', 'Bot Max'];
 const BOT_COLORS = ['#ff7675', '#fdcb6e', '#e17055', '#00cec9', '#fab1a0', '#a29bfe', '#55efc4'];
-const PLAYER_COLORS = ['#3b9dff', '#ff5e7e', '#ffd32a', '#2ed573', '#ff9f43', '#c56cf0', '#18dcff', '#f368e0'];
+const PLAYER_COLORS = ['#3b9dff', '#ff5e7e', '#ffd32a', '#2ed573', '#ff9f43', '#c56cf0', '#18dcff', '#f368e0', '#ff4757', '#7bed9f', '#ffffff', '#2f3542'];
+const HATS = ['cap', 'tophat', 'headband', 'helmet', 'bandana', 'crown', 'none', 'bucket', 'cat', 'viking'];
 
 let nextId = 1;
 const uid = () => (nextId++).toString(36);
@@ -101,7 +102,7 @@ class Game {
   newPlayer(name, isBot) {
     const color = isBot ? BOT_COLORS[this.colorIdx++ % BOT_COLORS.length] : PLAYER_COLORS[this.colorIdx++ % PLAYER_COLORS.length];
     return {
-      id: uid(), name: String(name).slice(0, 14) || 'Player', isBot, color, ws: null,
+      id: uid(), name: String(name).slice(0, 14) || 'Player', isBot, color, hat: HATS[Math.floor(Math.random() * HATS.length)], ws: null,
       x: WORLD / 2, y: WORLD / 2, angle: 0, hp: 100, shield: 0, alive: false, spectating: false,
       inv: [null, null, null, null, null], slot: 0, lastShot: 0, reloadEnd: 0, useEnd: 0, useItem: null,
       input: { u: 0, d: 0, l: 0, r: 0, a: 0, s: 0 },
@@ -156,6 +157,7 @@ class Game {
         this.broadcastLobby();
       } break;
       case 'start': if (p.id === this.hostId && this.phase === 'lobby') this.startGame(); break;
+      case 'skin': if (HATS.includes(m.hat)) p.hat = m.hat; if (PLAYER_COLORS.includes(m.color)) p.color = m.color; this.broadcastLobby(); break;
       case 'lobby': if (p.id === this.hostId && this.phase === 'ended') this.toLobby(); break;
       case 'input': if (m.i) { const i = m.i; p.input = { u: +!!i.u, d: +!!i.d, l: +!!i.l, r: +!!i.r, a: +i.a || 0, s: +!!i.s }; if (i.rl) this.reload(p); } break;
       case 'slot': if (Number.isInteger(m.i) && m.i >= 0 && m.i < 5 && !p.useItem) p.slot = m.i; break;
@@ -170,7 +172,7 @@ class Game {
 
   // ---------- lobby / rounds ----------
   broadcastLobby() {
-    const msg = { t: 'lobby', phase: this.phase, hostId: this.hostId, settings: this.settings, players: [...this.players.values()].map((p) => ({ id: p.id, name: p.name, isBot: p.isBot, color: p.color })) };
+    const msg = { t: 'lobby', phase: this.phase, hostId: this.hostId, settings: this.settings, players: [...this.players.values()].map((p) => ({ id: p.id, name: p.name, isBot: p.isBot, color: p.color, hat: p.hat })) };
     for (const p of this.humans()) send(p.ws, msg);
   }
   toLobby() {
@@ -500,7 +502,7 @@ class Game {
   broadcastState(t) {
     const players = [...this.players.values()].map((p) => {
       const w = p.inv[p.slot];
-      return { id: p.id, n: p.name, c: p.color, x: Math.round(p.x), y: Math.round(p.y), a: +p.angle.toFixed(2), hp: Math.round(p.hp), sh: Math.round(p.shield), al: p.alive ? 1 : 0, w: w ? w.key : null, wr: w && w.type === 'weapon' ? w.rarity : null, q: p.question ? 1 : 0, u: p.useItem ? 1 : 0, k: p.kills, pr: p.protectUntil > t ? 1 : 0, bot: p.isBot ? 1 : 0, ok: p.correct };
+      return { id: p.id, n: p.name, c: p.color, h: p.hat, x: Math.round(p.x), y: Math.round(p.y), a: +p.angle.toFixed(2), hp: Math.round(p.hp), sh: Math.round(p.shield), al: p.alive ? 1 : 0, w: w ? w.key : null, wr: w && w.type === 'weapon' ? w.rarity : null, q: p.question ? 1 : 0, u: p.useItem ? 1 : 0, k: p.kills, pr: p.protectUntil > t ? 1 : 0, bot: p.isBot ? 1 : 0, ok: p.correct };
     });
     const chests = this.chests.map((c) => { const row = [c.id, RARITIES.indexOf(c.rarity), c.state === 'open' ? 1 : (c.busyBy ? 2 : ((c.lockedUntil || 0) > t ? 3 : 0))]; if (c.moved) row.push(Math.round(c.x), Math.round(c.y)); return row; });
     const bullets = this.bullets.map((b) => [Math.round(b.x), Math.round(b.y), +Math.atan2(b.vy, b.vx).toFixed(2)]);
