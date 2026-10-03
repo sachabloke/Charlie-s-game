@@ -70,7 +70,18 @@ table#board { width: 100%; border-collapse: collapse; margin: 10px 0; } #board t
 #touchUi { position: absolute; right: 16px; bottom: 110px; display: none; flex-direction: column; gap: 10px; pointer-events: auto; }
 body.touch #touchUi { display: flex; }
 body.touch #slots .slot { pointer-events: auto; }
-body.touch #bottom { pointer-events: auto; }
 .tbtn { width: 86px; height: 86px; border-radius: 50%; border: 3px solid rgba(255,255,255,.6); background: rgba(255,211,77,.85); color: #2b1a00; font-weight: 900; font-size: 14px; line-height: 1.1; box-shadow: 0 4px 12px rgba(0,0,0,.5); }
 .tbtn:active { transform: scale(.94); }
 #focusHint { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); background: #ffd34d; color: #2b1a00; padding: 14px 24px; border-radius: 12px; font-weight: 900; font-size: 22px; box-shadow: 0 8px 30px rgba(0,0,0,.6); }
+
+/* Small phone screens */
+@media (max-height: 520px) {
+  .slot { width: 54px; height: 54px; font-size: 9px; } .slot .icon { font-size: 16px; } .slot .gicon { width: 40px; height: 20px; } .slot .ammo { font-size: 10px; }
+  #bars { width: 150px; } .bar { height: 16px; } .bar span { font-size: 11px; top: 0; }
+  #minimap { width: 100px; height: 100px; } #status { font-size: 16px; } #aliveCount { font-size: 12px; } #feed { width: 200px; font-size: 11px; }
+  .tbtn { width: 64px; height: 64px; font-size: 11px; } #touchUi { bottom: 80px; right: 10px; gap: 6px; }
+  #toast { font-size: 18px; padding: 8px 14px; } #prompt { font-size: 14px; top: 62%; }
+  .card.q { padding: 14px 16px; } #qText { font-size: 22px; } #qForm input { font-size: 20px; }
+}
+#rotateHint { display: none; position: fixed; inset: 0; z-index: 20; background: #101a26; color: #fff; align-items: center; justify-content: center; text-align: center; font-size: 22px; font-weight: 800; padding: 20px; }
+@media (orientation: portrait) and (max-width: 600px) { body.touch #rotateHint { display: flex; } }

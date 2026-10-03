@@ -211,8 +211,14 @@
     let a = Math.atan2(mouse.y - canvas.height / 2, mouse.x - canvas.width / 2);
     const mv = stickVec(touch.move), av = stickVec(touch.aim);
     let shoot = shooting;
-    if (touch.enabled) { if (touch.aim || touch.move) { a = touch.aim && av.len > 0.25 ? touch.aimAngle : (touch.aim ? touch.aimAngle : (mv.len > 0.2 ? mv.a : touch.aimAngle)); touch.lastAngle = a; } else if (touch.lastAngle !== undefined) a = touch.lastAngle; shoot = shoot || (!!touch.aim && av.len > 0.25); }
-    send({ t: 'input', i: { u: keys.w || keys.arrowup || mv.y < -0.3, d: keys.s || keys.arrowdown || mv.y > 0.3, l: keys.a || keys.arrowleft || mv.x < -0.3, r: keys.d || keys.arrowright || mv.x > 0.3, a, s: shoot && !inQuestion(), rl: reloadPulse } });
+    let tu = false, td = false, tl = false, tr = false;
+    if (touch.enabled) {
+      if (touch.aim) { if (av.len > 0.12) touch.aimAngle = av.a; a = touch.aimAngle; shoot = true; }
+      else if (touch.move && mv.len > 0.12) { a = mv.a; touch.aimAngle = a; }
+      else if (touch.aimAngle !== undefined) a = touch.aimAngle;
+      if (touch.move && mv.len > 0.12) { const cx = Math.cos(mv.a), cy = Math.sin(mv.a); tl = cx < -0.38; tr = cx > 0.38; tu = cy < -0.38; td = cy > 0.38; }
+    }
+    send({ t: 'input', i: { u: keys.w || keys.arrowup || tu, d: keys.s || keys.arrowdown || td, l: keys.a || keys.arrowleft || tl, r: keys.d || keys.arrowright || tr, a, s: shoot && !inQuestion(), rl: reloadPulse } });
     reloadPulse = false;
   }, 50);
 
@@ -220,7 +226,8 @@
   const touch = { enabled: false, move: null, aim: null, aimAngle: 0 };
   function enableTouch() { if (touch.enabled) return; touch.enabled = true; document.body.classList.add('touch'); }
   window.addEventListener('touchstart', enableTouch, { passive: true, once: true });
-  const stickVec = (st) => { if (!st) return { x: 0, y: 0, len: 0 }; const dx = st.x - st.sx, dy = st.y - st.sy; const len = Math.min(1, Math.hypot(dx, dy) / 60); const a = Math.atan2(dy, dx); return { x: Math.cos(a) * len, y: Math.sin(a) * len, len, a }; };
+  const STICK_R = 42;
+  const stickVec = (st) => { if (!st) return { x: 0, y: 0, len: 0, a: 0 }; const dx = st.x - st.sx, dy = st.y - st.sy; const len = Math.min(1, Math.hypot(dx, dy) / STICK_R); const a = Math.atan2(dy, dx); return { x: Math.cos(a) * len, y: Math.sin(a) * len, len, a }; };
   canvas.addEventListener('touchstart', (e) => {
     enableTouch(); if (!actx) sfx('pickup');
     for (const t of e.changedTouches) {
@@ -231,7 +238,7 @@
   }, { passive: false });
   canvas.addEventListener('touchmove', (e) => {
     for (const t of e.changedTouches) for (const st of [touch.move, touch.aim]) if (st && st.id === t.identifier) { st.x = t.clientX; st.y = t.clientY; }
-    if (touch.aim) { const v = stickVec(touch.aim); if (v.len > 0.25) touch.aimAngle = v.a; }
+    if (touch.aim) { const v = stickVec(touch.aim); if (v.len > 0.12) touch.aimAngle = v.a; }
     e.preventDefault();
   }, { passive: false });
   const touchEnd = (e) => { for (const t of e.changedTouches) { if (touch.move && touch.move.id === t.identifier) touch.move = null; if (touch.aim && touch.aim.id === t.identifier) touch.aim = null; } };
@@ -519,7 +526,7 @@
     ctx.restore();
     if (me && me.al && me.hp < 35) { ctx.fillStyle = `rgba(255,0,0,${(35 - me.hp) / 35 * 0.25 * (0.6 + 0.4 * Math.sin(now / 200))})`; ctx.fillRect(0, 0, W, H); }
     if (me && me.al && !touch.enabled) { ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(mouse.x, mouse.y, 9, 0, Math.PI * 2); ctx.moveTo(mouse.x - 14, mouse.y); ctx.lineTo(mouse.x - 5, mouse.y); ctx.moveTo(mouse.x + 5, mouse.y); ctx.lineTo(mouse.x + 14, mouse.y); ctx.moveTo(mouse.x, mouse.y - 14); ctx.lineTo(mouse.x, mouse.y - 5); ctx.moveTo(mouse.x, mouse.y + 5); ctx.lineTo(mouse.x, mouse.y + 14); ctx.stroke(); }
-    if (touch.enabled) for (const st of [touch.move, touch.aim]) if (st) { ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(st.sx, st.sy, 60, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.6)'; const v = stickVec(st); ctx.beginPath(); ctx.arc(st.sx + v.x * 60, st.sy + v.y * 60, 26, 0, Math.PI * 2); ctx.fill(); }
+    if (touch.enabled) for (const st of [touch.move, touch.aim]) if (st) { ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(st.sx, st.sy, STICK_R, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.6)'; const v = stickVec(st); ctx.beginPath(); ctx.arc(st.sx + v.x * STICK_R, st.sy + v.y * STICK_R, 20, 0, Math.PI * 2); ctx.fill(); }
     drawMinimap(me);
   }
   function drawMinimap(me) {
