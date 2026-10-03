@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
+local ContextActionService = game:GetService("ContextActionService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -47,7 +48,7 @@ local _hintLabel = mk("TextLabel", { Size = UDim2.new(0, 320, 0, 20), Position =
 local bricksLabel = mk("TextLabel", { Size = UDim2.new(0, 220, 0, 22), Position = UDim2.new(0, 16, 1, -122), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 211, 77), Font = FONT, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Left, Text = "🧱 Bricks: 6", TextStrokeTransparency = 0.4 }, hud)
 local crosshair = mk("TextLabel", { Size = UDim2.new(0, 30, 0, 30), Position = UDim2.new(0.5, -15, 0.5, -15), BackgroundTransparency = 1, TextColor3 = Color3.new(1, 1, 1), Font = FONT, TextSize = 26, Text = "+", TextStrokeTransparency = 0.3, Visible = false }, hud)
 local toast = mk("TextLabel", { Size = UDim2.new(0, 620, 0, 44), Position = UDim2.new(0.5, -310, 0.2, 0), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0.35, TextColor3 = Color3.new(1, 1, 1), Font = FONT, TextSize = 22, Text = "", Visible = false, TextWrapped = true }, hud); corner(toast, 10)
-local feed = mk("Frame", { Size = UDim2.new(0, 360, 0, 150), Position = UDim2.new(0, 12, 0, 40), BackgroundTransparency = 1 }, hud)
+local feed = mk("Frame", { Size = UDim2.new(0, 360, 0, 140), Position = UDim2.new(0, 16, 1, -290), BackgroundTransparency = 1, ClipsDescendants = true }, hud)
 mk("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4) }, feed)
 
 -- Question box
@@ -75,7 +76,7 @@ local function showQuestion(data: any)
 	qInput.Text = ""; qInput.Visible = true; qButton.Visible = true; qResult.Visible = false; qTimerBg.Visible = true
 	if data.kind == "reload" then qFrame.Position = UDim2.new(0.5, -280, 0, 50) else qFrame.Position = UDim2.new(0.5, -280, 0.5, -160) end
 	qFrame.Visible = true
-	task.defer(function() qInput:CaptureFocus() end)
+	task.defer(function() qInput:CaptureFocus(); task.wait(); qInput.Text = "" end)
 end
 local function submit()
 	if not question then return end
@@ -88,6 +89,7 @@ qButton.MouseButton1Click:Connect(submit)
 qInput.FocusLost:Connect(function(enterPressed) if enterPressed then submit() end end)
 
 local function onResult(data: any)
+	if data.kind == "cancel" then hideQuestion(); return end
 	question = nil
 	qInput.Visible = false; qButton.Visible = false; qTimerBg.Visible = false; qResult.Visible = true
 	if data.correct then
@@ -110,12 +112,17 @@ Result.OnClientEvent:Connect(onResult)
 -- ---------- notifications & feed ----------
 local toastUntil = 0
 local function showToast(text: string, color: Color3)
+	if qFrame.Visible then return end
 	toast.Text = text; toast.TextColor3 = color; toast.Visible = true; toastUntil = os.clock() + 2.5
 end
 local function addFeed(text: string, color: Color3)
 	local l = mk("TextLabel", { Size = UDim2.new(1, 0, 0, 22), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.5, TextColor3 = color, Font = FONT, TextSize = 14, Text = text, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = math.floor(os.clock() * 10) }, feed); corner(l, 6)
 	mk("UIPadding", { PaddingLeft = UDim.new(0, 8) }, l)
 	Debris:AddItem(l, 7)
+	local kids = feed:GetChildren(); local labels = {}
+	for _, k in ipairs(kids) do if k:IsA("TextLabel") then table.insert(labels, k) end end
+	table.sort(labels, function(a, b) return a.LayoutOrder < b.LayoutOrder end)
+	while #labels > 5 do local old = table.remove(labels, 1); if old then old:Destroy() end end
 end
 Notify.OnClientEvent:Connect(function(text: string, color: Color3)
 	if text == "hit" then crosshair.TextColor3 = Color3.fromRGB(255, 80, 80); task.delay(0.12, function() crosshair.TextColor3 = Color3.new(1, 1, 1) end); return end
@@ -151,18 +158,24 @@ end
 UserInputService.InputBegan:Connect(function(input, processed)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 and not processed then
 		firing = true; fireOnce()
-	elseif input.KeyCode == Enum.KeyCode.R and not processed then
-		Reload:FireServer()
-	elseif input.KeyCode == Enum.KeyCode.F and not processed then
-		local c = player.Character; local r = c and c:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if r then Build:FireServer(r.CFrame * CFrame.new(0, 2.5, -7)) end
 	end
 end)
 UserInputService.InputEnded:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then firing = false end
 end)
--- touch: tapping with a tool activates it through the Tool's own Activated event
+ContextActionService:BindAction("MR_Reload", function(_, state) if state == Enum.UserInputState.Begin then Reload:FireServer() end end, true, Enum.KeyCode.R)
+ContextActionService:SetTitle("MR_Reload", "Reload")
+ContextActionService:BindAction("MR_Build", function(_, state)
+	if state ~= Enum.UserInputState.Begin then return end
+	local c = player.Character; local r = c and c:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if r then Build:FireServer(r.CFrame * CFrame.new(0, 2.5, -7)) end
+end, true, Enum.KeyCode.F)
+ContextActionService:SetTitle("MR_Build", "Wall")
+-- touch: tapping with a tool activates it through the Tool's own Activated event (hook each tool once)
+local hooked: { [Tool]: boolean } = {}
 local function hookTool(tool: Tool)
+	if hooked[tool] then return end
+	hooked[tool] = true
 	tool.Activated:Connect(function() if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then fireOnce() end end)
 end
 local function hookCharacter(char: Model)
@@ -181,7 +194,7 @@ task.spawn(function()
 	end
 end)
 -- empty gun: the server tells us, we pop the reload sum
-Reload.OnClientEvent:Connect(function() if not question then Reload:FireServer() end end)
+Reload.OnClientEvent:Connect(function() if not question then showToast("Empty! Press R (or click) to reload with a quick sum", Color3.fromRGB(255, 211, 77)) end end)
 
 -- ---------- per-frame HUD ----------
 player.CameraMaxZoomDistance = 18
@@ -198,6 +211,7 @@ RunService.RenderStepped:Connect(function()
 	local shield = player:GetAttribute("Shield") or 0
 	shieldFill.Size = UDim2.new(shield / 100, 0, 1, 0); shieldText.Text = "SHIELD " .. shield
 	bricksLabel.Text = "🧱 Bricks: " .. tostring(player:GetAttribute("Bricks") or 0)
+	local m = UserInputService:GetMouseLocation(); crosshair.Position = UDim2.new(0, m.X - 15, 0, m.Y - 15)
 	local tool = currentTool()
 	if tool and tool:GetAttribute("Weapon") then
 		ammoLabel.Text = tostring(tool:GetAttribute("Ammo") or 0) .. " / " .. tostring(tool:GetAttribute("Mag") or 0); ammoLabel.Visible = true; crosshair.Visible = true
