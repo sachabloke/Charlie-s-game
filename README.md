@@ -1,5 +1,7 @@
 # Maths Royale
 
+**Play now: https://maths-royale.onrender.com** (first load after a quiet spell takes about a minute while the free server wakes up)
+
 A Fortnite-style battle game for up to 8 players where **every chest is locked with a maths sum**.
 Guns, bandages, medkits and shield potions all come out of chests, so the only way to get kitted
 out is to answer sums. Harder sums unlock better loot:
