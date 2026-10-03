@@ -1,6 +1,6 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #1b2838; font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif; color: #fff; }
-canvas#game { position: fixed; inset: 0; display: block; cursor: crosshair; }
+canvas#game { position: fixed; inset: 0; display: block; cursor: crosshair; outline: none; touch-action: none; }
 .hidden { display: none !important; }
 .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 30%, #2f5c8f, #101a26 70%); z-index: 10; }
 .screen.overlay { background: rgba(5, 12, 22, 0.72); }
@@ -65,3 +65,12 @@ button.link { background: none; border: 0; color: #8aa0b6; text-decoration: unde
 table#board { width: 100%; border-collapse: collapse; margin: 10px 0; } #board th, #board td { padding: 8px; text-align: left; border-bottom: 1px solid #2c4a6b; } #board th { color: #9fb3c8; font-size: 13px; }
 #report { background: #0f1821; border-radius: 10px; padding: 12px; margin-top: 8px; font-size: 14px; }
 #report .topic { display: flex; justify-content: space-between; padding: 3px 0; } #report .good { color: #2ed573; } #report .bad { color: #ff6b6b; }
+
+/* Touch controls */
+#touchUi { position: absolute; right: 16px; bottom: 110px; display: none; flex-direction: column; gap: 10px; pointer-events: auto; }
+body.touch #touchUi { display: flex; }
+body.touch #slots .slot { pointer-events: auto; }
+body.touch #bottom { pointer-events: auto; }
+.tbtn { width: 86px; height: 86px; border-radius: 50%; border: 3px solid rgba(255,255,255,.6); background: rgba(255,211,77,.85); color: #2b1a00; font-weight: 900; font-size: 14px; line-height: 1.1; box-shadow: 0 4px 12px rgba(0,0,0,.5); }
+.tbtn:active { transform: scale(.94); }
+#focusHint { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); background: #ffd34d; color: #2b1a00; padding: 14px 24px; border-radius: 12px; font-weight: 900; font-size: 22px; box-shadow: 0 8px 30px rgba(0,0,0,.6); }

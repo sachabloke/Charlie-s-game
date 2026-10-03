@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <title>Maths Royale</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<canvas id="game"></canvas>
+<canvas id="game" tabindex="0"></canvas>
 
 <!-- JOIN SCREEN -->
 <div id="join" class="screen">
@@ -27,6 +27,7 @@
         <li>Walk up to a chest and press <b>E</b> — answer the sum to open it</li>
         <li>Harder sums = better loot (grey → green → blue → purple → gold)</li>
         <li><b>1–5</b> pick an item, <b>click</b> to use bandages and shields, <b>R</b> reload, <b>Q</b> drop</li>
+        <li>On a tablet or phone: <b>left thumb</b> moves, <b>right thumb</b> aims and shoots</li>
       </ul>
     </div>
   </div>
@@ -82,6 +83,12 @@
     <div id="slots"></div>
   </div>
   <div id="toast" class="hidden"></div>
+  <div id="focusHint" class="hidden">👆 Click on the game, then use W A S D to move</div>
+  <div id="touchUi">
+    <button id="btnOpen" class="tbtn hidden">OPEN<br>CHEST</button>
+    <button id="btnUse" class="tbtn hidden">USE</button>
+    <button id="btnReload" class="tbtn hidden">RELOAD</button>
+  </div>
 </div>
 
 <!-- QUESTION -->

@@ -58,7 +58,7 @@
       case 'error': $('joinErr').textContent = m.msg; $('joinBtn').disabled = false; if (phase === 'join') { try { ws.close(); } catch (e) {} } break;
       case 'joined': myId = m.id; room = m.room; $('roomCode').textContent = room; break;
       case 'lobby': hostId = m.hostId; renderLobby(m); if (m.phase === 'lobby') { phase = 'lobby'; showScreen('lobby'); hideQuestion(); $('gameover').classList.add('hidden'); } break;
-      case 'world': world = { size: m.size, obstacles: m.obstacles, chests: new Map(m.chests.map((c) => [c.id, { x: c.x, y: c.y }])), mode: m.mode }; view.clear(); particles = []; feedItems = []; phase = 'playing'; showScreen('game'); hideQuestion(); $('gameover').classList.add('hidden'); toast(m.mode === 'br' ? 'Find a chest and answer the sum to get a gun!' : 'Fight! Open chests for better guns.', 3500); break;
+      case 'world': world = { size: m.size, obstacles: m.obstacles, chests: new Map(m.chests.map((c) => [c.id, { x: c.x, y: c.y }])), mode: m.mode }; view.clear(); particles = []; feedItems = []; phase = 'playing'; showScreen('game'); hideQuestion(); $('gameover').classList.add('hidden'); if (document.activeElement) document.activeElement.blur(); canvas.focus(); window.focus(); toast(m.mode === 'br' ? 'Find a chest and answer the sum to get a gun!' : 'Fight! Open chests for better guns.', 3500); break;
       case 'state': onState(m); break;
       case 'question': showQuestion(m); break;
       case 'result': onResult(m); break;
@@ -174,6 +174,7 @@
       else if (S.me && inv[S.me.slot] && inv[S.me.slot].type === 'consumable') text = text || 'Click to use ' + CNAME[inv[S.me.slot].key];
     } else if (me && !me.al && S.me && S.me.spectating) text = 'You are out. Watching the others…';
     pr.innerHTML = text; pr.classList.toggle('hidden', !text);
+    if (touch.enabled) { const c = me && me.al && nearestChest(me); $('btnOpen').classList.toggle('hidden', !(c && c.state === 0)); const cur = S.me && inv[S.me.slot]; $('btnUse').classList.toggle('hidden', !(cur && cur.type === 'consumable')); $('btnReload').classList.toggle('hidden', !(cur && cur.type === 'weapon')); }
     renderFeed();
   }
   function nearestChest(me) {
@@ -184,17 +185,19 @@
 
   // ---------- input ----------
   const inQuestion = () => !$('question').classList.contains('hidden');
+  const CODE_KEYS = { KeyW: 'w', KeyA: 'a', KeyS: 's', KeyD: 'd', ArrowUp: 'arrowup', ArrowDown: 'arrowdown', ArrowLeft: 'arrowleft', ArrowRight: 'arrowright', KeyE: 'e', KeyR: 'r', KeyQ: 'q', Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5' };
+  const keyOf = (e) => CODE_KEYS[e.code] || e.key.toLowerCase();
   window.addEventListener('keydown', (e) => {
     if (inQuestion()) { if (e.key === 'Escape') $('qCancel').click(); return; }
-    if (phase !== 'playing' || e.target.tagName === 'INPUT') return;
-    const k = e.key.toLowerCase(); keys[k] = true;
+    if (phase !== 'playing' || (e.target.tagName === 'INPUT' && e.target.offsetParent !== null)) return;
+    const k = keyOf(e); keys[k] = true;
     if (k >= '1' && k <= '5') send({ t: 'slot', i: +k - 1 });
     if (k === 'r') reloadPulse = true;
     if (k === 'q') send({ t: 'drop' });
     if (k === 'e') { const me = S && S.players.find((p) => p.id === myId); const c = me && nearestChest(me); if (c && c.state === 0) send({ t: 'open', id: c.id }); }
     if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
   });
-  window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+  window.addEventListener('keyup', (e) => { keys[keyOf(e)] = false; });
   window.addEventListener('blur', () => { keys = {}; shooting = false; });
   canvas.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
   canvas.addEventListener('mousedown', (e) => { if (e.button === 0) { shooting = true; if (!actx) sfx('pickup'); } });
@@ -204,10 +207,38 @@
     if (phase !== 'playing' || !S) return;
     const me = S.players.find((p) => p.id === myId); if (!me || !me.al) return;
     const v = view.get(myId) || me;
-    const a = Math.atan2(mouse.y - canvas.height / 2, mouse.x - canvas.width / 2);
-    send({ t: 'input', i: { u: keys.w || keys.arrowup, d: keys.s || keys.arrowdown, l: keys.a || keys.arrowleft, r: keys.d || keys.arrowright, a, s: shooting && !inQuestion(), rl: reloadPulse } });
+    let a = Math.atan2(mouse.y - canvas.height / 2, mouse.x - canvas.width / 2);
+    const mv = stickVec(touch.move), av = stickVec(touch.aim);
+    let shoot = shooting;
+    if (touch.enabled) { if (touch.aim || touch.move) { a = touch.aim && av.len > 0.25 ? touch.aimAngle : (touch.aim ? touch.aimAngle : (mv.len > 0.2 ? mv.a : touch.aimAngle)); touch.lastAngle = a; } else if (touch.lastAngle !== undefined) a = touch.lastAngle; shoot = shoot || (!!touch.aim && av.len > 0.25); }
+    send({ t: 'input', i: { u: keys.w || keys.arrowup || mv.y < -0.3, d: keys.s || keys.arrowdown || mv.y > 0.3, l: keys.a || keys.arrowleft || mv.x < -0.3, r: keys.d || keys.arrowright || mv.x > 0.3, a, s: shoot && !inQuestion(), rl: reloadPulse } });
     reloadPulse = false;
   }, 50);
+
+  // ---------- touch controls (phones / tablets) ----------
+  const touch = { enabled: false, move: null, aim: null, aimAngle: 0 };
+  function enableTouch() { if (touch.enabled) return; touch.enabled = true; document.body.classList.add('touch'); }
+  window.addEventListener('touchstart', enableTouch, { passive: true, once: true });
+  const stickVec = (st) => { if (!st) return { x: 0, y: 0, len: 0 }; const dx = st.x - st.sx, dy = st.y - st.sy; const len = Math.min(1, Math.hypot(dx, dy) / 60); const a = Math.atan2(dy, dx); return { x: Math.cos(a) * len, y: Math.sin(a) * len, len, a }; };
+  canvas.addEventListener('touchstart', (e) => {
+    enableTouch(); if (!actx) sfx('pickup');
+    for (const t of e.changedTouches) {
+      const st = { id: t.identifier, sx: t.clientX, sy: t.clientY, x: t.clientX, y: t.clientY };
+      if (t.clientX < canvas.width / 2) { if (!touch.move) touch.move = st; } else if (!touch.aim) touch.aim = st;
+    }
+    e.preventDefault();
+  }, { passive: false });
+  canvas.addEventListener('touchmove', (e) => {
+    for (const t of e.changedTouches) for (const st of [touch.move, touch.aim]) if (st && st.id === t.identifier) { st.x = t.clientX; st.y = t.clientY; }
+    if (touch.aim) { const v = stickVec(touch.aim); if (v.len > 0.25) touch.aimAngle = v.a; }
+    e.preventDefault();
+  }, { passive: false });
+  const touchEnd = (e) => { for (const t of e.changedTouches) { if (touch.move && touch.move.id === t.identifier) touch.move = null; if (touch.aim && touch.aim.id === t.identifier) touch.aim = null; } };
+  canvas.addEventListener('touchend', touchEnd); canvas.addEventListener('touchcancel', touchEnd);
+  $('btnOpen').addEventListener('click', () => { const me = S && S.players.find((p) => p.id === myId); const c = me && nearestChest(me); if (c && c.state === 0) send({ t: 'open', id: c.id }); });
+  $('btnReload').addEventListener('click', () => { reloadPulse = true; });
+  $('btnUse').addEventListener('click', () => send({ t: 'use' }));
+  $('slots').addEventListener('click', (e) => { const slot = e.target.closest('.slot'); if (!slot) return; const i = [...$('slots').children].indexOf(slot); if (i >= 0) send({ t: 'slot', i }); });
 
   // ---------- join / lobby buttons ----------
   $('joinBtn').addEventListener('click', () => {
@@ -229,6 +260,7 @@
   function frame(now) {
     const dt = Math.min(0.1, (now - lastFrame) / 1000); lastFrame = now;
     if (phase === 'playing' || phase === 'ended') draw(dt, now);
+    $('focusHint').classList.toggle('hidden', !(phase === 'playing' && !touch.enabled && !inQuestion() && !document.hasFocus()));
     if (question && qTimerLen) { const f = Math.max(0, 1 - (performance.now() - qTimerStart) / qTimerLen); $('qTimer').style.width = f * 100 + '%'; $('qTimer').style.background = f < 0.3 ? '#ff6b6b' : '#3b9dff'; }
     requestAnimationFrame(frame);
   }
@@ -334,7 +366,9 @@
     // vignette when hurt
     if (me && me.al && me.hp < 35) { ctx.fillStyle = `rgba(255,0,0,${(35 - me.hp) / 35 * 0.25 * (0.6 + 0.4 * Math.sin(now / 200))})`; ctx.fillRect(0, 0, W, H); }
     // crosshair
-    if (me && me.al) { ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(mouse.x, mouse.y, 9, 0, Math.PI * 2); ctx.moveTo(mouse.x - 14, mouse.y); ctx.lineTo(mouse.x - 5, mouse.y); ctx.moveTo(mouse.x + 5, mouse.y); ctx.lineTo(mouse.x + 14, mouse.y); ctx.moveTo(mouse.x, mouse.y - 14); ctx.lineTo(mouse.x, mouse.y - 5); ctx.moveTo(mouse.x, mouse.y + 5); ctx.lineTo(mouse.x, mouse.y + 14); ctx.stroke(); }
+    if (me && me.al && !touch.enabled) { ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(mouse.x, mouse.y, 9, 0, Math.PI * 2); ctx.moveTo(mouse.x - 14, mouse.y); ctx.lineTo(mouse.x - 5, mouse.y); ctx.moveTo(mouse.x + 5, mouse.y); ctx.lineTo(mouse.x + 14, mouse.y); ctx.moveTo(mouse.x, mouse.y - 14); ctx.lineTo(mouse.x, mouse.y - 5); ctx.moveTo(mouse.x, mouse.y + 5); ctx.lineTo(mouse.x, mouse.y + 14); ctx.stroke(); }
+    // touch sticks
+    if (touch.enabled) for (const st of [touch.move, touch.aim]) if (st) { ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(st.sx, st.sy, 60, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.6)'; const v = stickVec(st); ctx.beginPath(); ctx.arc(st.sx + v.x * 60, st.sy + v.y * 60, 26, 0, Math.PI * 2); ctx.fill(); }
     drawMinimap(me);
   }
   function drawMinimap(me) {
