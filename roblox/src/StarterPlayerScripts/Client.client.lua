@@ -73,7 +73,7 @@ local function showQuestion(data: any)
 	qHeader.Text = title; qHeader.BackgroundColor3 = col:Lerp(DARK, 0.6); qHeader.TextColor3 = col
 	qTopic.Text = data.topic or ""; qText.Text = data.text or ""; qHint.Text = if data.hint then "Hint: " .. data.hint else ""
 	qInput.Text = ""; qInput.Visible = true; qButton.Visible = true; qResult.Visible = false; qTimerBg.Visible = true
-	if data.kind == "reload" then qFrame.Size = UDim2.new(0, 420, 0, 230); qFrame.Position = UDim2.new(0.5, -210, 0, 60) else qFrame.Size = UDim2.new(0, 560, 0, 290); qFrame.Position = UDim2.new(0.5, -280, 0.5, -160) end
+	if data.kind == "reload" then qFrame.Position = UDim2.new(0.5, -280, 0, 50) else qFrame.Position = UDim2.new(0.5, -280, 0.5, -160) end
 	qFrame.Visible = true
 	task.defer(function() qInput:CaptureFocus() end)
 end

@@ -324,9 +324,9 @@ local function giveStarterKit(p: Player)
 	local bp = p:FindFirstChild("Backpack"); if not bp then return end
 	Weapons.makeTool("pistol", "common").Parent = bp
 end
-Players.PlayerAdded:Connect(function(p)
+local function onPlayerAdded(p: Player)
 	setupPlayer(p)
-	p.CharacterAdded:Connect(function(char)
+	local function onCharacter(char: Model)
 		local s = stateOf(p)
 		p:SetAttribute("Shield", 0)
 		local hum = char:WaitForChild("Humanoid") :: Humanoid
@@ -352,8 +352,12 @@ Players.PlayerAdded:Connect(function(p)
 		else
 			notify(p, "Welcome to Maths Royale! Find a chest and solve the sum.", Color3.fromRGB(255, 211, 77))
 		end
-	end)
-end)
+	end
+	p.CharacterAdded:Connect(onCharacter)
+	if p.Character then task.spawn(onCharacter, p.Character) end
+end
+Players.PlayerAdded:Connect(onPlayerAdded)
+for _, p in ipairs(Players:GetPlayers()) do task.spawn(onPlayerAdded, p) end
 Players.PlayerRemoving:Connect(function(p)
 	local s = states[p]
 	if s and s.pending and s.pending.chest then (s.pending.chest :: Chest).busy = nil end

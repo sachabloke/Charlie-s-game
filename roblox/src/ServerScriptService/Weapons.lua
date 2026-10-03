@@ -80,7 +80,7 @@ function Weapons.makeConsumable(key: string, count: number): Tool
 	tool:SetAttribute("Consumable", key); tool:SetAttribute("Count", count)
 	tool.ToolTip = def.name
 	local handle = Instance.new("Part")
-	handle.Name = "Handle"; handle.CanCollide = false; handle.Massless = true
+	handle.Name = "Handle"; handle.CanCollide = false; handle.Massless = true; handle.Parent = tool
 	if def.heal then
 		handle.Size = Vector3.new(1.2, 0.5, 1.2); handle.Color = Color3.fromRGB(240, 240, 240); handle.Material = Enum.Material.Fabric
 		piece(handle, Vector3.new(0.6, 0.12, 1.0), CFrame.new(0, 0.3, 0), Color3.fromRGB(230, 50, 50), Enum.Material.SmoothPlastic)
@@ -89,7 +89,6 @@ function Weapons.makeConsumable(key: string, count: number): Tool
 		handle.Shape = Enum.PartType.Cylinder; handle.Size = Vector3.new(1.4, 0.7, 0.7); handle.Color = Color3.fromRGB(80, 160, 255); handle.Material = Enum.Material.Glass; handle.Transparency = 0.3
 		piece(handle, Vector3.new(0.3, 0.5, 0.5), CFrame.new(0.8, 0, 0), Color3.fromRGB(50, 50, 60), Enum.Material.SmoothPlastic)
 	end
-	handle.Parent = tool
 	return tool
 end
 
