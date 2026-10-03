@@ -29,12 +29,13 @@ Anyone on the same Wi-Fi can join by opening `http://<your-computer's-IP>:3000` 
 
 ## Playing with friends over the internet
 
-The game needs to run on a server that everyone can reach. The easiest free option is **Render**:
+The game needs to run on a server that everyone can reach. The easiest free option is **Render**.
 
-1. Push this folder to a GitHub repository (it already is, if you are reading this on GitHub).
-2. Go to https://render.com and sign up (free).
-3. Click **New → Blueprint**, connect your GitHub account and pick this repository.
-   Render reads `render.yaml` and sets everything up.
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/sachabloke/Charlie-s-game)
+
+1. Click the button above (or go to https://render.com/deploy?repo=https://github.com/sachabloke/Charlie-s-game).
+2. Sign in to Render with your GitHub account (free, no card needed).
+3. Click **Deploy Blueprint**. Render reads `render.yaml` and sets everything up.
 4. After a minute or two you get a web address like `https://maths-royale.onrender.com`.
 5. Share that address with friends. One person presses PLAY, gets a room code and tells the others.
 
