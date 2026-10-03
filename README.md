@@ -1,5 +1,7 @@
 # Maths Royale
 
+**Roblox version:** see the [`roblox/`](roblox/) folder for a full Roblox Studio game (open `MathsRoyale.rbxl`, press Publish).
+
 **Play now: https://maths-royale.onrender.com** (first load after a quiet spell takes about a minute while the free server wakes up)
 
 A 3D Fortnite-style battle game for up to 8 players, with blocky Roblox-style characters, where **every chest is locked with a maths sum**.

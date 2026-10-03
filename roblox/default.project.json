@@ -1,0 +1,21 @@
+{
+  "name": "MathsRoyale",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": { "$className": "ReplicatedStorage", "$path": "src/ReplicatedStorage" },
+    "ServerScriptService": { "$className": "ServerScriptService", "$path": "src/ServerScriptService" },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "$properties": { "CameraMaxZoomDistance": 18, "CameraMinZoomDistance": 6, "HealthDisplayDistance": 60, "NameDisplayDistance": 100 },
+      "StarterPlayerScripts": { "$className": "StarterPlayerScripts", "$path": "src/StarterPlayerScripts" }
+    },
+    "Lighting": {
+      "$className": "Lighting",
+      "$properties": { "Technology": "Future", "Brightness": 2.6, "ClockTime": 14.2, "GlobalShadows": true, "ShadowSoftness": 0.3, "EnvironmentDiffuseScale": 0.6, "EnvironmentSpecularScale": 0.6 }
+    },
+    "Workspace": { "$className": "Workspace", "$properties": { "StreamingEnabled": false, "Gravity": 196.2 } },
+    "Players": { "$className": "Players", "$properties": { "CharacterAutoLoads": true, "RespawnTime": 3 } },
+    "SoundService": { "$className": "SoundService" },
+    "StarterGui": { "$className": "StarterGui", "$properties": { "ShowDevelopmentGui": true } }
+  }
+}
