@@ -150,12 +150,12 @@ local function askQuestion(p: Player, kind: string, q: Maths.Question, timeLimit
 end
 
 -- ---------- chests ----------
-type Chest = { model: Model, body: Part, lid: Part, light: PointLight, glow: Highlight, prompt: ProximityPrompt, rarity: string, open: boolean, busy: Player?, lockedUntil: number, reopenAt: number, legendaryOnly: boolean }
+type Chest = { model: Model, body: Part, lid: Part, light: PointLight, glow: SelectionBox, prompt: ProximityPrompt, rarity: string, open: boolean, busy: Player?, lockedUntil: number, reopenAt: number, legendaryOnly: boolean }
 local chests: { Chest } = {}
 local function setChestRarity(c: Chest, rarity: string)
 	c.rarity = rarity
 	local col = Config.RARITY[rarity].color
-	c.light.Color = col; c.glow.OutlineColor = col; c.glow.FillColor = col
+	c.light.Color = col; c.glow.Color3 = col; c.glow.SurfaceColor3 = col
 	c.prompt.ObjectText = Config.RARITY[rarity].label .. " chest"
 	for _, band in ipairs(c.model:GetChildren()) do if band.Name == "Band" then (band :: Part).Color = col end end
 end
@@ -172,7 +172,7 @@ local function makeChest(pos: Vector3, legendaryOnly: boolean): Chest
 	local lock = Instance.new("Part"); lock.Name = "Lock"; lock.Size = Vector3.new(0.7, 0.9, 0.3); lock.CFrame = body.CFrame * CFrame.new(0, 0.9, 1.5)
 	lock.Anchored = true; lock.Material = Enum.Material.Metal; lock.Color = Color3.fromRGB(255, 211, 77); lock.CanCollide = false; lock.Parent = model
 	local light = Instance.new("PointLight"); light.Range = 14; light.Brightness = 2; light.Parent = body
-	local glow = Instance.new("Highlight"); glow.FillTransparency = 0.85; glow.OutlineTransparency = 0.2; glow.Parent = model
+	local glow = Instance.new("SelectionBox"); glow.Adornee = body; glow.LineThickness = 0.06; glow.SurfaceTransparency = 0.85; glow.Transparency = 0.1; glow.Parent = model
 	local prompt = Instance.new("ProximityPrompt"); prompt.ActionText = "Solve a sum to open"; prompt.HoldDuration = 0; prompt.MaxActivationDistance = 9; prompt.RequiresLineOfSight = false; prompt.Parent = body
 	model.Parent = workspace:FindFirstChild("Map") or workspace
 	local c: Chest = { model = model, body = body, lid = lid, light = light, glow = glow, prompt = prompt, rarity = "common", open = false, busy = nil, lockedUntil = 0, reopenAt = 0, legendaryOnly = legendaryOnly }
@@ -188,7 +188,7 @@ local function makeChest(pos: Vector3, legendaryOnly: boolean): Chest
 end
 local function openChest(c: Chest, p: Player)
 	c.open = true; c.busy = nil; c.reopenAt = os.clock() + Config.CHEST_RESPAWN
-	c.light.Enabled = false; c.glow.Enabled = false; c.prompt.Enabled = false
+	c.light.Enabled = false; c.glow.Visible = false; c.prompt.Enabled = false
 	TweenService:Create(c.lid, TweenInfo.new(0.5, Enum.EasingStyle.Back), { CFrame = c.body.CFrame * CFrame.new(0, 2.3, -1.2) * CFrame.Angles(-1.6, 0, 0) }):Play()
 	local names = {}
 	for _, tool in ipairs(Weapons.makeLoot(c.rarity)) do tool.Parent = p:FindFirstChild("Backpack"); table.insert(names, tool.Name) end
@@ -196,7 +196,7 @@ local function openChest(c: Chest, p: Player)
 end
 local function closeChest(c: Chest)
 	c.open = false; c.lid.CFrame = c.body.CFrame * CFrame.new(0, 1.7, 0)
-	c.light.Enabled = true; c.glow.Enabled = true; c.prompt.Enabled = true
+	c.light.Enabled = true; c.glow.Visible = true; c.prompt.Enabled = true
 	setChestRarity(c, if c.legendaryOnly then "legendary" else Weapons.rollRarity())
 end
 
@@ -331,6 +331,7 @@ Players.PlayerAdded:Connect(function(p)
 		p:SetAttribute("Shield", 0)
 		local hum = char:WaitForChild("Humanoid") :: Humanoid
 		hum.Died:Connect(function()
+			if s.pending and s.pending.chest then (s.pending.chest :: Chest).busy = nil end
 			s.needsRespawnSum = true; s.pending = nil
 			local killerId = hum:GetAttribute("LastHitBy")
 			local killer = if type(killerId) == "number" then Players:GetPlayerByUserId(killerId) else nil
@@ -379,6 +380,20 @@ do
 	end)
 end
 vaultInside = Vector3.new(info.vault.x, 4, info.vault.z + 2)
+do -- exit pad: step on it to leave the vault
+	local pad = Instance.new("Part"); pad.Name = "VaultExit"; pad.Size = Vector3.new(6, 0.4, 6); pad.CFrame = CFrame.new(info.vault.x, 1.2, info.vault.z + 8)
+	pad.Anchored = true; pad.Material = Enum.Material.Neon; pad.Color = Color3.fromRGB(80, 200, 255); pad.Parent = info.mapFolder
+	local label = Instance.new("BillboardGui"); label.Size = UDim2.new(0, 120, 0, 30); label.StudsOffset = Vector3.new(0, 3, 0); label.AlwaysOnTop = true; label.Parent = pad
+	local text = Instance.new("TextLabel"); text.Size = UDim2.fromScale(1, 1); text.BackgroundTransparency = 1; text.TextColor3 = Color3.new(1, 1, 1); text.TextStrokeTransparency = 0.3; text.TextScaled = true; text.Font = Enum.Font.GothamBold; text.Text = "EXIT"; text.Parent = label
+	local lastExit: { [Player]: number } = {}
+	pad.Touched:Connect(function(hit)
+		local model = hit:FindFirstAncestorOfClass("Model"); local p = model and Players:GetPlayerFromCharacter(model)
+		if not p then return end
+		if os.clock() - (lastExit[p] or 0) < 2 then return end
+		lastExit[p] = os.clock()
+		local r = root(p); if r then r.CFrame = CFrame.new(info.vault.x, 4, info.vault.z + info.vault.d / 2 + 6) end
+	end)
+end
 
 -- ---------- storm waves ----------
 local storm = Instance.new("Part"); storm.Name = "Storm"; storm.Shape = Enum.PartType.Cylinder; storm.Anchored = true; storm.CanCollide = false
