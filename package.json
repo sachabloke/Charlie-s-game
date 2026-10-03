@@ -7,9 +7,12 @@
     "start": "node server/index.js",
     "test": "node --test test/*.test.js"
   },
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "express": "^4.19.2",
+    "three": "^0.160.0",
     "ws": "^8.17.0"
   },
   "license": "MIT"

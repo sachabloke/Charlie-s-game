@@ -1,6 +1,6 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #1b2838; font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif; color: #fff; }
-canvas#game { position: fixed; inset: 0; display: block; cursor: crosshair; outline: none; touch-action: none; }
+canvas#game { position: fixed; inset: 0; display: block; width: 100vw; height: 100vh; cursor: crosshair; outline: none; touch-action: none; }
 .hidden { display: none !important; }
 .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 30%, rgba(30,60,95,0.55), rgba(10,18,28,0.88) 75%); z-index: 10; }
 .screen.overlay { background: rgba(5, 12, 22, 0.72); }
@@ -72,7 +72,7 @@ body.touch #touchUi { display: flex; }
 body.touch #slots .slot { pointer-events: auto; }
 .tbtn { width: 86px; height: 86px; border-radius: 50%; border: 3px solid rgba(255,255,255,.6); background: rgba(255,211,77,.85); color: #2b1a00; font-weight: 900; font-size: 14px; line-height: 1.1; box-shadow: 0 4px 12px rgba(0,0,0,.5); }
 .tbtn:active { transform: scale(.94); }
-#focusHint { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); background: #ffd34d; color: #2b1a00; padding: 14px 24px; border-radius: 12px; font-weight: 900; font-size: 22px; box-shadow: 0 8px 30px rgba(0,0,0,.6); }
+#focusHint { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); text-align: center; line-height: 1.3; background: #ffd34d; color: #2b1a00; padding: 14px 24px; border-radius: 12px; font-weight: 900; font-size: 22px; box-shadow: 0 8px 30px rgba(0,0,0,.6); }
 
 /* Small phone screens */
 @media (max-height: 520px) {
@@ -94,3 +94,13 @@ body.touch #slots .slot { pointer-events: auto; }
 .pick.on { border-color: #ffd34d; background: #2c4a6b; }
 .swatch { width: 28px; height: 28px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
 .swatch.on { border-color: #fff; box-shadow: 0 0 0 2px #ffd34d; }
+
+#focusHint small { display: block; font-size: 14px; font-weight: 600; margin-top: 6px; }
+#crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; pointer-events: none; }
+#crosshair::before, #crosshair::after { content: ''; position: absolute; background: #fff; box-shadow: 0 0 3px #000; }
+#crosshair::before { left: 10px; top: 0; width: 2px; height: 22px; } #crosshair::after { top: 10px; left: 0; height: 2px; width: 22px; }
+#stormTint { position: absolute; inset: 0; background: radial-gradient(circle, rgba(120,40,200,0) 40%, rgba(120,40,200,0.55) 100%); pointer-events: none; }
+#floaters { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.floater { position: absolute; transform: translate(-50%, -50%); font-weight: 900; text-shadow: 0 2px 4px #000, 0 0 2px #000; white-space: nowrap; }
+.tbtn.fire { background: rgba(255,80,80,.9); color: #fff; width: 96px; height: 96px; font-size: 18px; }
+@media (max-height: 520px) { .tbtn.fire { width: 72px; height: 72px; font-size: 13px; } }

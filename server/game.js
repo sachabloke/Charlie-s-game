@@ -159,7 +159,7 @@ class Game {
       case 'start': if (p.id === this.hostId && this.phase === 'lobby') this.startGame(); break;
       case 'skin': if (HATS.includes(m.hat)) p.hat = m.hat; if (PLAYER_COLORS.includes(m.color)) p.color = m.color; this.broadcastLobby(); break;
       case 'lobby': if (p.id === this.hostId && this.phase === 'ended') this.toLobby(); break;
-      case 'input': if (m.i) { const i = m.i; p.input = { u: +!!i.u, d: +!!i.d, l: +!!i.l, r: +!!i.r, a: +i.a || 0, s: +!!i.s }; if (i.rl) this.reload(p); } break;
+      case 'input': if (m.i) { const i = m.i; p.input = { u: +!!i.u, d: +!!i.d, l: +!!i.l, r: +!!i.r, a: +i.a || 0, s: +!!i.s, mx: clamp(+i.mx || 0, -1, 1), my: clamp(+i.my || 0, -1, 1) }; if (i.rl) this.reload(p); } break;
       case 'slot': if (Number.isInteger(m.i) && m.i >= 0 && m.i < 5 && !p.useItem) p.slot = m.i; break;
       case 'use': this.useConsumable(p); break;
       case 'drop': this.dropSlot(p); break;
@@ -456,8 +456,9 @@ class Game {
       // movement
       const frozen = !!p.question;
       let mx = inp.r - inp.l, my = inp.d - inp.u;
+      if (inp.mx || inp.my) { mx = inp.mx; my = inp.my; }
       if (!frozen && (mx || my)) {
-        const len = Math.hypot(mx, my); const sp = SPEED * (p.useItem ? 0.45 : 1);
+        const len = Math.max(1, Math.hypot(mx, my)); const sp = SPEED * (p.useItem ? 0.45 : 1);
         p.x += (mx / len) * sp * dt; p.y += (my / len) * sp * dt;
         resolveCircle(p, PLAYER_R, this.obstacles);
       }

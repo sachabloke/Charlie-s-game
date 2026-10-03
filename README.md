@@ -2,7 +2,7 @@
 
 **Play now: https://maths-royale.onrender.com** (first load after a quiet spell takes about a minute while the free server wakes up)
 
-A Fortnite-style battle game for up to 8 players where **every chest is locked with a maths sum**.
+A 3D Fortnite-style battle game for up to 8 players, with blocky Roblox-style characters, where **every chest is locked with a maths sum**.
 Guns, bandages, medkits and shield potions all come out of chests, so the only way to get kitted
 out is to answer sums. Harder sums unlock better loot:
 
@@ -47,6 +47,8 @@ Notes:
 - The game also works on Railway, Fly.io, or any host that can run Node.js (`npm start`). A
   `Dockerfile` is included.
 
+On a tablet or phone: left thumb moves, right thumb looks around, and the FIRE button shoots.
+
 Alternative: run it at home with `npm start` and in a second terminal run `npx localtunnel --port 3000`.
 It prints a temporary public address you can share. Your computer has to stay on.
 
@@ -54,8 +56,9 @@ It prints a temporary public address you can share. Your computer has to stay on
 
 | Key | Action |
 |---|---|
+| Click on the game | Grabs the mouse so you can look around (Esc gives it back) |
 | W A S D or arrow keys | Move |
-| Mouse | Aim |
+| Mouse | Look around and aim |
 | Left click | Shoot (or use the selected bandage / shield) |
 | E | Open the chest you are standing next to (a sum pops up) |
 | 1 – 5 | Pick an item from your bag |
