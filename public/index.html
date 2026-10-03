@@ -19,6 +19,8 @@
     <input id="name" maxlength="14" placeholder="e.g. Charlie" autocomplete="off">
     <label>Room code <span class="muted">(leave blank to start a new game)</span></label>
     <input id="room" maxlength="4" placeholder="e.g. ABCD" autocomplete="off" style="text-transform:uppercase">
+    <label>Graphics <span class="muted">(turn down if the game is choppy)</span></label>
+    <select id="quality"><option value="auto">Auto (recommended)</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low (fastest)</option></select>
     <button id="joinBtn" class="big">PLAY</button>
     <p id="joinErr" class="err"></p>
     <div class="howto">

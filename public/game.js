@@ -23,6 +23,32 @@ let S = null; // latest server state
 const view = new Map(); // smoothed positions per player id
 let keys = {}, shooting = false, reloadPulse = false;
 let yaw = 0, pitch = 0.3, locked = false;
+const pred = { x: 0, y: 0, valid: false }; // where WE think our character is (moves instantly)
+const SPEED = 270, PLAYER_R = 20;
+const WRATE = { pistol: 330, smg: 95, shotgun: 850, rifle: 170, sniper: 1300 }; let lastLocalShot = 0;
+function pointInObstacle(x, y, pad = 0) { for (const o of world.obstacles) { if (o.t === 'r') { if (x > o.x - pad && x < o.x + o.w + pad && y > o.y - pad && y < o.y + o.h + pad) return true; } else if (Math.hypot(x - o.x, y - o.y) < o.r + pad) return true; } return false; }
+function resolveCircle(p, r) {
+  for (const o of world.obstacles) {
+    if (o.t === 'r') { const cx = Math.max(o.x, Math.min(p.x, o.x + o.w)), cy = Math.max(o.y, Math.min(p.y, o.y + o.h)); const dx = p.x - cx, dy = p.y - cy; const d = Math.hypot(dx, dy); if (d >= r) continue; if (d < 1e-6) { const l = p.x - o.x, rr = o.x + o.w - p.x, t = p.y - o.y, b = o.y + o.h - p.y; const m = Math.min(l, rr, t, b); if (m === l) p.x = o.x - r; else if (m === rr) p.x = o.x + o.w + r; else if (m === t) p.y = o.y - r; else p.y = o.y + o.h + r; } else { p.x = cx + (dx / d) * r; p.y = cy + (dy / d) * r; } }
+    else { const d = Math.hypot(p.x - o.x, p.y - o.y); const min = o.r + r; if (d < min) { const dx = d < 1e-6 ? 1 : (p.x - o.x) / d, dy = d < 1e-6 ? 0 : (p.y - o.y) / d; p.x = o.x + dx * min; p.y = o.y + dy * min; } }
+  }
+  p.x = Math.max(r, Math.min(world.size - r, p.x)); p.y = Math.max(r, Math.min(world.size - r, p.y));
+}
+function moveVector() {
+  let f = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0);
+  let r = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0);
+  const mv = stickVec(touch.move);
+  if (touch.enabled && touch.move && mv.len > 0.12) { f = -mv.y; r = mv.x; }
+  let mx = Math.cos(yaw) * f - Math.sin(yaw) * r, my = Math.sin(yaw) * f + Math.cos(yaw) * r;
+  const len = Math.hypot(mx, my); if (len > 1) { mx /= len; my /= len; }
+  return { mx, my };
+}
+function predictMove(me, dt) {
+  if (!me || !me.al || !world) { pred.valid = false; return; }
+  if (!pred.valid || Math.hypot(pred.x - me.x, pred.y - me.y) > 140) { pred.x = me.x; pred.y = me.y; pred.valid = true; }
+  if (!inQuestion() && !me.q) { const { mx, my } = moveVector(); const sp = SPEED * (S.me && S.me.useEnd > S.now ? 0.45 : 1); pred.x += mx * sp * dt; pred.y += my * sp * dt; resolveCircle(pred, PLAYER_R); }
+  const k = 1 - Math.pow(0.25, dt); pred.x += (me.x - pred.x) * k; pred.y += (me.y - pred.y) * k; // gently agree with the server
+}
 let question = null, qTimerStart = 0, qTimerLen = 0, resultTimeout = null;
 let feedItems = [], shake = 0, myHpLast = 100;
 const flashes = new Map();
@@ -81,7 +107,7 @@ function onState(m) {
   if (me) { if (me.hp < myHpLast && me.al) { shake = Math.min(14, shake + (myHpLast - me.hp) * 0.5); sfx('hurt'); } myHpLast = me.hp; }
   for (const e of m.events) {
     if (e.k === 'hit') { spawnSparks(e.x, 40, e.y, 8, 0xffb347, 150); if (e.who === myId) { sfx('hit'); floater(e.x, 70, e.y, String(e.dmg), '#ffd34d'); } else if (e.victim === myId) floater(e.x, 70, e.y, '-' + e.dmg, '#ff6b6b'); }
-    else if (e.k === 'shot') { flashes.set(e.id, performance.now()); if (e.id === myId) sfx('shoot'); }
+    else if (e.k === 'shot') { if (e.id !== myId) flashes.set(e.id, performance.now()); }
     else if (e.k === 'kill') { const vp = m.players.find((p) => p.n === e.victim); spawnBoom(e.x, e.y, vp ? vp.c : '#ffffff'); addFeed(`<span style="color:${e.killerColor || '#aaa'}">${esc(e.killer || 'The storm')}</span> eliminated <span style="color:${e.victimColor}">${esc(e.victim)}</span> ${e.killer ? 'with a ' + esc(e.weapon) : ''}`); if (e.victim === myName()) toast(`Eliminated by ${e.killer || 'the storm'}!`, 2500); if (e.killer === myName()) toast(`You eliminated ${e.victim}!`, 2000); }
     else if (e.k === 'answer') addFeed(`<span style="color:${e.color}">${esc(e.name)}</span> ${e.correct ? '✅ got a <b>' + esc(e.topic) + '</b> sum right' : '❌ missed a <b>' + esc(e.topic) + '</b> sum'}`);
     else if (e.k === 'info') { addFeed(esc(e.msg)); if (/storm/i.test(e.msg)) toast(e.msg, 2500); }
@@ -252,14 +278,9 @@ $('slots').addEventListener('click', (e) => { const slot = e.target.closest('.sl
 setInterval(() => {
   if (phase !== 'playing' || !S) return;
   const me = S.players.find((p) => p.id === myId); if (!me || !me.al) return;
-  // movement relative to the camera: forward = (cos yaw, sin yaw), right = (-sin yaw, cos yaw)
-  let f = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0);
-  let r = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0);
-  const mv = stickVec(touch.move);
-  if (touch.enabled && touch.move && mv.len > 0.12) { f = -mv.y; r = mv.x; }
-  let mx = Math.cos(yaw) * f - Math.sin(yaw) * r, my = Math.sin(yaw) * f + Math.cos(yaw) * r;
-  const len = Math.hypot(mx, my); if (len > 1) { mx /= len; my /= len; }
+  const { mx, my } = moveVector();
   const shoot = (shooting && locked) || touch.fire;
+  if (shoot && !inQuestion() && S.me) { const w = S.me.inv[S.me.slot]; const t = performance.now(); if (w && w.type === 'weapon' && w.ammo > 0 && S.me.reloadEnd <= S.now && t - lastLocalShot >= WRATE[w.key]) { lastLocalShot = t; flashes.set(myId, t); sfx('shoot'); } }
   send({ t: 'input', i: { mx, my, a: yaw, s: shoot && !inQuestion(), rl: reloadPulse } });
   reloadPulse = false;
 }, 50);
@@ -280,8 +301,11 @@ $('lobbyBtn').addEventListener('click', () => send({ t: 'lobby' }));
 // =====================================================================
 //                              3D WORLD
 // =====================================================================
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+const QUALITY = { high: { grass: 650, shadow: 2048, dpr: 1.5, fog: [1100, 3200] }, medium: { grass: 320, shadow: 1024, dpr: 1, fog: [800, 2400] }, low: { grass: 100, shadow: 0, dpr: 0.75, fog: [450, 1500] } };
+let qualityMode = localStorage.getItem('mr_quality') || 'auto';
+let quality = qualityMode === 'auto' ? ((navigator.hardwareConcurrency || 4) <= 4 || /Mobi|Android|iPhone|iPad/.test(navigator.userAgent) ? 'medium' : 'high') : qualityMode;
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: quality !== 'low', powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, QUALITY[quality].dpr));
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.2;
 const scene = new THREE.Scene();
@@ -299,9 +323,29 @@ const sun = new THREE.DirectionalLight(0xfff4dc, 1.7); sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.near = 10; sun.shadow.camera.far = 3000;
 sun.shadow.camera.left = -900; sun.shadow.camera.right = 900; sun.shadow.camera.top = 900; sun.shadow.camera.bottom = -900; sun.shadow.bias = -0.0005;
 scene.add(sun); scene.add(sun.target);
+if (QUALITY[quality].shadow === 0) sun.castShadow = false; else sun.shadow.mapSize.set(QUALITY[quality].shadow, QUALITY[quality].shadow);
+scene.fog.near = QUALITY[quality].fog[0]; scene.fog.far = QUALITY[quality].fog[1];
 const worldGroup = new THREE.Group(); scene.add(worldGroup);
 const dynGroup = new THREE.Group(); scene.add(dynGroup);
 function resize() { renderer.setSize(window.innerWidth, window.innerHeight, false); camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); }
+function applyQuality(q) {
+  quality = q; const Q = QUALITY[q];
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.dpr)); resize();
+  sun.castShadow = Q.shadow > 0; if (Q.shadow > 0) { sun.shadow.mapSize.set(Q.shadow, Q.shadow); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
+  scene.fog.near = Q.fog[0]; scene.fog.far = Q.fog[1];
+  GRASS.per = Q.grass; for (const m of GRASS.meshes) m.userData.cell = null;
+}
+// automatic downgrade when the frame rate is poor
+let fpsAcc = 0, fpsN = 0, fpsSince = performance.now();
+function watchFps(dt) {
+  if (qualityMode !== 'auto') return; fpsAcc += dt; fpsN++;
+  if (performance.now() - fpsSince < 4000) return;
+  const fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; fpsSince = performance.now();
+  if (fps < 30 && quality === 'high') { applyQuality('medium'); toast('Graphics lowered for smoother play', 2500); }
+  else if (fps < 26 && quality === 'medium') { applyQuality('low'); toast('Graphics set to low for smoother play', 2500); }
+}
+$('quality').value = qualityMode;
+$('quality').addEventListener('change', () => { qualityMode = $('quality').value; localStorage.setItem('mr_quality', qualityMode); applyQuality(qualityMode === 'auto' ? 'medium' : qualityMode); });
 window.addEventListener('resize', resize); resize();
 
 const hash = (x, y) => { let h = (Math.round(x) * 374761393 + Math.round(y) * 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
@@ -493,7 +537,8 @@ const bladeMat = new THREE.MeshLambertMaterial({ map: bladeTex, alphaTest: 0.5, 
 bladeMat.onBeforeCompile = (sh) => { sh.uniforms.uTime = GRASS.time; sh.vertexShader = 'uniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n float wx = instanceMatrix[3][0], wz = instanceMatrix[3][2];\n float sway = sin(uTime * 1.6 + wx * 0.02 + wz * 0.013) * 0.6 + sin(uTime * 2.7 + wz * 0.05) * 0.4;\n transformed.x += sway * 5.0 * uv.y * uv.y;\n transformed.z += cos(uTime * 1.3 + wx * 0.03) * 2.5 * uv.y * uv.y;'); };
 function initGrass() {
   for (const m of GRASS.meshes) worldGroup.remove(m); GRASS.meshes = []; GRASS.cells.clear();
-  for (let i = 0; i < 9; i++) { const m = new THREE.InstancedMesh(bladeGeo, bladeMat, GRASS.per); m.receiveShadow = true; m.frustumCulled = false; m.userData.cell = null; worldGroup.add(m); GRASS.meshes.push(m); }
+  GRASS.per = QUALITY[quality].grass;
+  for (let i = 0; i < 9; i++) { const m = new THREE.InstancedMesh(bladeGeo, bladeMat, QUALITY.high.grass); m.receiveShadow = true; m.frustumCulled = false; m.userData.cell = null; worldGroup.add(m); GRASS.meshes.push(m); }
 }
 const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3(), _e = new THREE.Euler();
 function fillGrassCell(mesh, cx, cz) {
@@ -586,8 +631,10 @@ requestAnimationFrame(frame);
 
 function draw(dt, now) {
   const k = 1 - Math.pow(0.001, dt);
-  for (const p of S.players) { const v = view.get(p.id); if (!v) continue; v.x += (p.x - v.x) * k; v.y += (p.y - v.y) * k; let da = p.a - v.a; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2; v.a += da * Math.min(1, dt * 18); }
+  for (const p of S.players) { const v = view.get(p.id); if (!v) continue; if (!(p.id === myId && p.al && pred.valid)) { v.x += (p.x - v.x) * k; v.y += (p.y - v.y) * k; } let da = p.a - v.a; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2; v.a += da * Math.min(1, dt * 18); }
   const me = S.players.find((p) => p.id === myId);
+  predictMove(me, dt); watchFps(dt);
+  if (me && me.al && pred.valid) { const v = view.get(myId); if (v) { v.x = pred.x; v.y = pred.y; } }
   let focus = me && view.get(myId), focusP = me;
   if (me && !me.al) { const other = S.players.find((p) => p.al); if (other) { focus = view.get(other.id); focusP = other; } }
   // players
