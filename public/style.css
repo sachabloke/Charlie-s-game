@@ -104,3 +104,6 @@ body.touch #slots .slot { pointer-events: auto; }
 .floater { position: absolute; transform: translate(-50%, -50%); font-weight: 900; text-shadow: 0 2px 4px #000, 0 0 2px #000; white-space: nowrap; }
 .tbtn.fire { background: rgba(255,80,80,.9); color: #fff; width: 96px; height: 96px; font-size: 18px; }
 @media (max-height: 520px) { .tbtn.fire { width: 72px; height: 72px; font-size: 13px; } }
+
+#scoreboard { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(10,18,28,.9); border: 2px solid #2c4a6b; border-radius: 14px; padding: 16px 22px; min-width: 360px; pointer-events: none; }
+#scoreboard table { border-collapse: collapse; width: 100%; } #scoreboard th, #scoreboard td { padding: 6px 10px; text-align: left; border-bottom: 1px solid #2c4a6b; } #scoreboard th { color: #9fb3c8; font-size: 12px; } #scoreboard tr.me td { color: #ffd34d; font-weight: 700; }

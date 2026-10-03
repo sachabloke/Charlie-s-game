@@ -9,7 +9,8 @@ const PLAYER_R = 20;
 const SPEED = 270;
 const CHEST_COUNT = 42;
 const CHEST_RANGE = 85;
-const PICKUP_RANGE = 40;
+const PICKUP_RANGE = 55;
+const INTERACT_RANGE = 95;
 const QUESTION_MS = 30000;
 const CHEST_RESPAWN_MS = 70000;
 const DM_DURATION_MS = 8 * 60 * 1000;
@@ -164,6 +165,7 @@ class Game {
       case 'use': this.useConsumable(p); break;
       case 'drop': this.dropSlot(p); break;
       case 'open': this.tryOpenChest(p, m.id); break;
+      case 'pickup': this.tryPickup(p, m.id); break;
       case 'answer': this.answer(p, m.a); break;
       case 'cancel': this.cancelQuestion(p); break;
       case 'ping': send(p.ws, { t: 'pong', c: m.c }); break;
@@ -247,6 +249,15 @@ class Game {
   }
   dropAll(p) { for (let i = 0; i < 5; i++) if (p.inv[i]) { this.spawnDrop(p.x, p.y, p.inv[i]); p.inv[i] = null; } }
   dropSlot(p) { if (!p.alive || p.useItem) return; const it = p.inv[p.slot]; if (!it) return; p.inv[p.slot] = null; this.spawnDrop(p.x, p.y, it); }
+  // Press E on a drop: take it, swapping with the item in hand when the bag is full.
+  tryPickup(p, dropId) {
+    if (!p.alive || p.useItem || p.question) return;
+    const i = this.drops.findIndex((d) => d.id === dropId); if (i < 0) return;
+    const d = this.drops[i]; if (dist(p.x, p.y, d.x, d.y) > INTERACT_RANGE) return;
+    if (this.giveItem(p, d.item)) { this.drops.splice(i, 1); return; }
+    const cur = p.inv[p.slot];
+    if (cur) { p.inv[p.slot] = d.item; this.drops.splice(i, 1); this.spawnDrop(d.x, d.y, cur); }
+  }
 
   // ---------- chests & questions ----------
   tierFor(rarity) {
@@ -272,7 +283,8 @@ class Game {
     send(p.ws, { t: 'question', kind: 'respawn', rarity: 'common', topic: q.topic, text: q.text, hint: q.hint, timeLimit: QUESTION_MS * 2 });
   }
   recordAnswer(p, q, correct) {
-    if (correct) p.correct++; else p.wrong++;
+    if (correct) { p.correct++; p.streak = (p.streak || 0) + 1; if (p.streak % 3 === 0 && p.alive) { p.shield = Math.min(100, p.shield + 25); this.pushEvent({ k: 'info', msg: `🔥 ${p.name} is on a ${p.streak}-sum streak! +25 shield` }); } }
+    else { p.wrong++; p.streak = 0; }
     const t = (p.byTopic[q.topic] ||= { right: 0, wrong: 0 }); if (correct) t.right++; else t.wrong++;
   }
   answer(p, raw) {
@@ -503,7 +515,7 @@ class Game {
   broadcastState(t) {
     const players = [...this.players.values()].map((p) => {
       const w = p.inv[p.slot];
-      return { id: p.id, n: p.name, c: p.color, h: p.hat, x: Math.round(p.x), y: Math.round(p.y), a: +p.angle.toFixed(2), hp: Math.round(p.hp), sh: Math.round(p.shield), al: p.alive ? 1 : 0, w: w ? w.key : null, wr: w && w.type === 'weapon' ? w.rarity : null, q: p.question ? 1 : 0, u: p.useItem ? 1 : 0, k: p.kills, pr: p.protectUntil > t ? 1 : 0, bot: p.isBot ? 1 : 0, ok: p.correct };
+      return { id: p.id, n: p.name, c: p.color, h: p.hat, x: Math.round(p.x), y: Math.round(p.y), a: +p.angle.toFixed(2), hp: Math.round(p.hp), sh: Math.round(p.shield), al: p.alive ? 1 : 0, w: w ? w.key : null, wr: w && w.type === 'weapon' ? w.rarity : null, q: p.question ? 1 : 0, u: p.useItem ? 1 : 0, k: p.kills, d: p.deaths, pr: p.protectUntil > t ? 1 : 0, bot: p.isBot ? 1 : 0, ok: p.correct };
     });
     const chests = this.chests.map((c) => { const row = [c.id, RARITIES.indexOf(c.rarity), c.state === 'open' ? 1 : (c.busyBy ? 2 : ((c.lockedUntil || 0) > t ? 3 : 0))]; if (c.moved) row.push(Math.round(c.x), Math.round(c.y)); return row; });
     const bullets = this.bullets.map((b) => [Math.round(b.x), Math.round(b.y), +Math.atan2(b.vy, b.vx).toFixed(2)]);
@@ -513,7 +525,7 @@ class Game {
     const events = this.events; this.events = [];
     const base = { t: 'state', now: t, players, chests, bullets, drops, storm, alive, timeLeft: this.endsAt ? Math.max(0, this.endsAt - t) : null, events };
     for (const p of this.humans()) {
-      base.me = { inv: p.inv, slot: p.slot, reloadEnd: p.reloadEnd, useEnd: p.useEnd, useStart: p.useItem ? p.useEnd - CONSUMABLES[p.useItem.key].time : 0, spectating: p.spectating };
+      base.me = { streak: p.streak || 0, inv: p.inv, slot: p.slot, reloadEnd: p.reloadEnd, useEnd: p.useEnd, useStart: p.useItem ? p.useEnd - CONSUMABLES[p.useItem.key].time : 0, spectating: p.spectating };
       send(p.ws, base);
     }
     for (const c of this.chests) c.moved = false;

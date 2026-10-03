@@ -50,8 +50,14 @@ function predictMove(me, dt) {
   const k = 1 - Math.pow(0.25, dt); pred.x += (me.x - pred.x) * k; pred.y += (me.y - pred.y) * k; // gently agree with the server
 }
 let question = null, qTimerStart = 0, qTimerLen = 0, resultTimeout = null;
-let feedItems = [], shake = 0, myHpLast = 100;
+let feedItems = [], shake = 0, myHpLast = 100, lastStreak = 0;
 const flashes = new Map();
+let jumpV = 0, jumpY = 0; // purely visual hop
+function renderScoreboard() {
+  if (!S) return;
+  const rows = [...S.players].sort((a, b) => (b.k - a.k) || (b.ok - a.ok));
+  $('scoreboard').innerHTML = '<table><tr><th>Player</th><th>Elims</th><th>Sums right</th><th>Status</th></tr>' + rows.map((p) => `<tr class="${p.id === myId ? 'me' : ''}"><td><span class="dot" style="background:${p.c}"></span> ${esc(p.n)}</td><td>${p.k}</td><td>${p.ok}</td><td>${p.al ? 'Alive' : 'Out'}</td></tr>`).join('') + '</table>';
+}
 
 // ---------- sound ----------
 let actx = null;
@@ -104,6 +110,7 @@ function onState(m) {
   }
   for (const c of m.chests) if (c.length > 4 && world) { world.chests.set(c[0], { x: c[3], y: c[4] }); const g = chestMeshes.get(c[0]); if (g) g.position.set(c[3], 0, c[4]); }
   const me = m.players.find((p) => p.id === myId);
+  if (m.me && m.me.streak !== lastStreak) { if (m.me.streak > 0 && m.me.streak % 3 === 0) { toast(`🔥 ${m.me.streak} sums in a row! +25 shield`, 2500); sfx('correct'); } lastStreak = m.me.streak; }
   if (me) { if (me.hp < myHpLast && me.al) { shake = Math.min(14, shake + (myHpLast - me.hp) * 0.5); sfx('hurt'); } myHpLast = me.hp; }
   for (const e of m.events) {
     if (e.k === 'hit') { spawnSparks(e.x, 40, e.y, 8, 0xffb347, 150); if (e.who === myId) { sfx('hit'); floater(e.x, 70, e.y, String(e.dmg), '#ffd34d'); } else if (e.victim === myId) floater(e.x, 70, e.y, '-' + e.dmg, '#ff6b6b'); }
@@ -191,6 +198,17 @@ function nearestChest(me) {
   for (const c of S.chests) { const pos = world.chests.get(c[0]); if (!pos || c[2] === 1) continue; const d = Math.hypot(pos.x - me.x, pos.y - me.y); if (d < bd) { bd = d; best = { id: c[0], state: c[2], rarity: c[1] }; } }
   return best;
 }
+function nearestDrop(me) {
+  if (!S) return null; let best = null, bd = 90;
+  for (const d of S.drops) { const dd = Math.hypot(d.x - me.x, d.y - me.y); if (dd < bd) { bd = dd; best = d; } }
+  return best;
+}
+const dropName = (d) => d.type === 'weapon' ? `${RLABEL[d.rarity][0] + RLABEL[d.rarity].slice(1).toLowerCase()} ${WNAME[d.key]}` : `${CNAME[d.key]}${d.count > 1 ? ' ×' + d.count : ''}`;
+function interact() {
+  const me = S && S.players.find((p) => p.id === myId); if (!me || !me.al) return;
+  const c = nearestChest(me); if (c && c.state === 0) { send({ t: 'open', id: c.id }); return; }
+  const d = nearestDrop(me); if (d) send({ t: 'pickup', id: d.id });
+}
 function updateHud() {
   if (!S) return;
   const me = S.players.find((p) => p.id === myId);
@@ -210,19 +228,20 @@ function updateHud() {
   if (me && me.al) {
     const c = nearestChest(me);
     if (c) text = c.state === 0 ? 'Press <b>E</b> to open the chest' : c.state === 2 ? 'Someone is opening this chest…' : c.state === 3 ? 'Locked for a moment…' : '';
+    else { const d = nearestDrop(me); if (d) { const full = inv.filter(Boolean).length >= 5 && !(d.type === 'consumable' && inv.some((it) => it && it.type === 'consumable' && it.key === d.key)); text = full ? `Bag full: press <b>E</b> to swap for the ${esc(dropName(d))}` : `Press <b>E</b> to pick up the ${esc(dropName(d))}`; } }
     if (S.me && S.me.useEnd > S.now) text = `Using… ${Math.ceil((S.me.useEnd - S.now) / 1000)}s`;
     else if (S.me && S.me.reloadEnd > S.now) text = 'Reloading…';
     else if (S.me && inv[S.me.slot] && inv[S.me.slot].type === 'consumable') text = text || 'Click to use ' + CNAME[inv[S.me.slot].key];
   } else if (me && !me.al && S.me && S.me.spectating) text = 'You are out. Watching the others…';
   pr.innerHTML = text; pr.classList.toggle('hidden', !text);
-  if (touch.enabled) { const c = me && me.al && nearestChest(me); $('btnOpen').classList.toggle('hidden', !(c && c.state === 0)); const cur = S.me && inv[S.me.slot]; $('btnUse').classList.toggle('hidden', !(cur && cur.type === 'consumable')); $('btnReload').classList.toggle('hidden', !(cur && cur.type === 'weapon')); $('btnFire').classList.toggle('hidden', !(me && me.al)); }
+  if (touch.enabled) { const c = me && me.al && nearestChest(me); const d = me && me.al && !c && nearestDrop(me); $('btnOpen').classList.toggle('hidden', !((c && c.state === 0) || d)); $('btnOpen').innerHTML = d && !(c && c.state === 0) ? 'PICK<br>UP' : 'OPEN<br>CHEST'; $('btnJump').classList.toggle('hidden', !(me && me.al)); const cur = S.me && inv[S.me.slot]; $('btnUse').classList.toggle('hidden', !(cur && cur.type === 'consumable')); $('btnReload').classList.toggle('hidden', !(cur && cur.type === 'weapon')); $('btnFire').classList.toggle('hidden', !(me && me.al)); }
   const outside = me && me.al && S.storm && Math.hypot(me.x - S.storm.x, me.y - S.storm.y) > S.storm.r;
   $('stormTint').classList.toggle('hidden', !outside);
   renderFeed();
 }
 
 // ---------- input ----------
-const CODE_KEYS = { KeyW: 'w', KeyA: 'a', KeyS: 's', KeyD: 'd', ArrowUp: 'arrowup', ArrowDown: 'arrowdown', ArrowLeft: 'arrowleft', ArrowRight: 'arrowright', KeyE: 'e', KeyR: 'r', KeyQ: 'q', Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5' };
+const CODE_KEYS = { Space: ' ', Tab: 'tab', KeyW: 'w', KeyA: 'a', KeyS: 's', KeyD: 'd', ArrowUp: 'arrowup', ArrowDown: 'arrowdown', ArrowLeft: 'arrowleft', ArrowRight: 'arrowright', KeyE: 'e', KeyR: 'r', KeyQ: 'q', Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5' };
 const keyOf = (e) => CODE_KEYS[e.code] || e.key.toLowerCase();
 window.addEventListener('keydown', (e) => {
   if (inQuestion()) { if (e.key === 'Escape') $('qCancel').click(); return; }
@@ -231,10 +250,12 @@ window.addEventListener('keydown', (e) => {
   if (k >= '1' && k <= '5') send({ t: 'slot', i: +k - 1 });
   if (k === 'r') reloadPulse = true;
   if (k === 'q') send({ t: 'drop' });
-  if (k === 'e') { const me = S && S.players.find((p) => p.id === myId); const c = me && nearestChest(me); if (c && c.state === 0) send({ t: 'open', id: c.id }); }
+  if (k === 'e') interact();
+  if (k === ' ' && jumpV === 0 && jumpY === 0) jumpV = 230;
+  if (k === 'tab') { $('scoreboard').classList.remove('hidden'); renderScoreboard(); e.preventDefault(); }
   if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
 });
-window.addEventListener('keyup', (e) => { keys[keyOf(e)] = false; });
+window.addEventListener('keyup', (e) => { keys[keyOf(e)] = false; if (keyOf(e) === 'tab') $('scoreboard').classList.add('hidden'); });
 window.addEventListener('blur', () => { keys = {}; shooting = false; });
 canvas.addEventListener('mousedown', (e) => {
   if (e.button !== 0) return; if (!actx) sfx('pickup');
@@ -270,7 +291,8 @@ const fireBtn = $('btnFire');
 fireBtn.addEventListener('touchstart', (e) => { touch.fire = true; e.preventDefault(); }, { passive: false });
 fireBtn.addEventListener('touchend', (e) => { touch.fire = false; e.preventDefault(); }, { passive: false });
 fireBtn.addEventListener('touchcancel', () => { touch.fire = false; });
-$('btnOpen').addEventListener('click', () => { const me = S && S.players.find((p) => p.id === myId); const c = me && nearestChest(me); if (c && c.state === 0) send({ t: 'open', id: c.id }); });
+$('btnOpen').addEventListener('click', interact);
+$('btnJump').addEventListener('click', () => { if (jumpV === 0 && jumpY === 0) jumpV = 230; });
 $('btnReload').addEventListener('click', () => { reloadPulse = true; });
 $('btnUse').addEventListener('click', () => send({ t: 'use' }));
 $('slots').addEventListener('click', (e) => { const slot = e.target.closest('.slot'); if (!slot) return; const i = [...$('slots').children].indexOf(slot); if (i >= 0) send({ t: 'slot', i }); });
@@ -648,6 +670,7 @@ function draw(dt, now) {
     const moving = Math.hypot(p.x - v.x, p.y - v.y) > 1.5 || (p.id === myId && (keys.w || keys.a || keys.s || keys.d || keys.arrowup || keys.arrowdown || keys.arrowleft || keys.arrowright || (touch.move && stickVec(touch.move).len > 0.12)));
     u.legs[0].rotation.z = moving ? Math.sin(now / 120) * 0.7 : 0; u.legs[1].rotation.z = moving ? -Math.sin(now / 120) * 0.7 : 0;
     av.position.y = moving ? Math.abs(Math.sin(now / 120)) * 2 : 0;
+    if (p.id === myId) { if (jumpV !== 0 || jumpY > 0) { jumpY += jumpV * dt; jumpV -= 700 * dt; if (jumpY <= 0) { jumpY = 0; jumpV = 0; } } av.position.y += jumpY; if (jumpY > 0) { u.legs[0].rotation.z = 0.5; u.legs[1].rotation.z = -0.5; } }
     if (u.gunKey !== p.w || u.gunRarity !== p.wr) { while (u.gunHolder.children.length > 1) { const c = u.gunHolder.children[1]; u.gunHolder.remove(c); disposeGroup(c); } u.gunKey = p.w; u.gunRarity = p.wr; if (p.w && WNAME[p.w]) { const gun = makeGun(p.w, p.wr || 'common'); u.gunHolder.add(gun); u.flash.position.x = gun.userData.tip; } }
     u.flash.visible = (flashes.get(p.id) || 0) > now - 60; if (u.flash.visible) u.flash.material.rotation = Math.random() * 6;
     u.ring.visible = !!p.pr; if (p.pr) u.ring.rotation.z = now / 400;

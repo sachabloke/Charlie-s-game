@@ -75,3 +75,26 @@ test('battle royale ends when one player is left and storm shrinks', () => {
   g.kill(bot, p1, 'rifle');
   return new Promise((resolve) => setTimeout(() => { assert.strictEqual(g.phase, 'ended'); assert.strictEqual(ws1.last('gameover').winner.name, 'Solo'); resolve(); }, 1700));
 });
+
+test('pressing E on a dropped gun picks it up, or swaps when the bag is full', () => {
+  const g = new Game('PICK', () => {}); clearInterval(g.timer);
+  const ws = fakeWs(); const p = g.addHuman(ws, 'Charlie');
+  g.handle(p, { t: 'settings', mode: 'dm', bots: 0 }); g.handle(p, { t: 'start' });
+  p.inv = [p.inv[0], null, null, null, null];
+  g.spawnDrop(p.x, p.y, { type: 'weapon', key: 'rifle', rarity: 'epic', ammo: 25 });
+  const drop = g.drops[g.drops.length - 1];
+  g.handle(p, { t: 'pickup', id: drop.id });
+  assert.ok(p.inv.some((it) => it && it.key === 'rifle'), 'rifle picked up into a free slot');
+  // fill the bag, then swap the held pistol for a sniper on the ground
+  for (let i = 0; i < 5; i++) if (!p.inv[i]) p.inv[i] = { type: 'consumable', key: 'medkit', count: 1 };
+  p.slot = 0; assert.strictEqual(p.inv[0].key, 'pistol');
+  g.spawnDrop(p.x, p.y, { type: 'weapon', key: 'sniper', rarity: 'legendary', ammo: 3 });
+  const drop2 = g.drops[g.drops.length - 1];
+  g.handle(p, { t: 'pickup', id: drop2.id });
+  assert.strictEqual(p.inv[0].key, 'sniper', 'held item swapped for the sniper');
+  assert.ok(g.drops.some((d) => d.item.key === 'pistol'), 'pistol left on the ground');
+  // streak bonus: three correct answers in a row give shield
+  p.shield = 0; for (let i = 0; i < 3; i++) g.recordAnswer(p, { topic: 'x' }, true);
+  assert.strictEqual(p.shield, 25);
+  g.removePlayer(p.id);
+});
