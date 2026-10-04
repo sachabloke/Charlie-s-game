@@ -142,10 +142,11 @@ end
 local function busyWithSum(s: PlayerState): boolean
 	return s.needsRespawnSum or (s.pending ~= nil and s.pending.kind ~= "reload")
 end
-local function damagePlayer(victim: Player, amount: number, attacker: Player?)
+local function damagePlayer(victim: Player, amount: number, attacker: Player?, fromStorm: boolean?)
 	local hum = humanoid(victim); if not hum or hum.Health <= 0 then return end
 	local s = stateOf(victim)
-	if busyWithSum(s) then return end -- thinking about a sum, or waiting to respawn: can't be hurt
+	if busyWithSum(s) then return end -- thinking about a chest/gate/respawn sum, or waiting to respawn: can't be hurt
+	if fromStorm and s.pending then return end -- the storm never hurts anyone with a sum on screen (reload sums included)
 	local shield = victim:GetAttribute("Shield") or 0
 	if shield > 0 then local take = math.min(shield, amount); victim:SetAttribute("Shield", shield - take); amount -= take end
 	if amount > 0 then
@@ -481,7 +482,7 @@ RunService.Heartbeat:Connect(function(dt)
 		if s.pending and now > s.pending.deadline then finishQuestion(p, false, true) end
 		if stormActive then
 			local r = root(p)
-			if r and (Vector3.new(r.Position.X, 0, r.Position.Z) - stormCenter).Magnitude > stormRadius then damagePlayer(p, Config.STORM_DAMAGE * 0.5, nil) end
+			if r and (Vector3.new(r.Position.X, 0, r.Position.Z) - stormCenter).Magnitude > stormRadius then damagePlayer(p, Config.STORM_DAMAGE * 0.5, nil, true) end
 		end
 	end
 	for _, c in ipairs(chests) do if c.open and now >= c.reopenAt then closeChest(c) end end
