@@ -93,7 +93,7 @@ function handle(m) {
     case 'error': $('joinErr').textContent = m.msg; $('joinBtn').disabled = false; if (phase === 'join') { try { ws.close(); } catch (e) {} } break;
     case 'joined': myId = m.id; room = m.room; $('roomCode').textContent = room; sendSkin(); break;
     case 'lobby': hostId = m.hostId; renderLobby(m); if (m.phase === 'lobby') { phase = 'lobby'; showScreen('lobby'); hideQuestion(); $('gameover').classList.add('hidden'); } break;
-    case 'world': world = { size: m.size, obstacles: m.obstacles, chests: new Map(m.chests.map((c) => [c.id, { x: c.x, y: c.y }])), mode: m.mode }; view.clear(); feedItems = []; phase = 'playing'; buildWorld(); showScreen('game'); hideQuestion(); $('gameover').classList.add('hidden'); if (document.activeElement) document.activeElement.blur(); toast(m.mode === 'br' ? 'Find a chest and answer the sum to get a gun!' : 'Fight! Open chests for better guns.', 3500); break;
+    case 'world': world = { size: m.size, obstacles: m.obstacles, chests: new Map(m.chests.map((c) => [c.id, { x: c.x, y: c.y }])), mode: m.mode }; view.clear(); feedItems = []; phase = 'playing'; buildWorld(); showScreen('game'); hideQuestion(); $('gameover').classList.add('hidden'); if (document.activeElement) document.activeElement.blur(); toast(m.mode === 'br' ? 'Find a chest and answer the question to get a gun!' : 'Fight! Open chests for better guns.', 3500); break;
     case 'state': onState(m); break;
     case 'question': showQuestion(m); break;
     case 'result': onResult(m); break;
@@ -112,13 +112,13 @@ function onState(m) {
   }
   for (const c of m.chests) if (c.length > 4 && world) { world.chests.set(c[0], { x: c[3], y: c[4] }); const g = chestMeshes.get(c[0]); if (g) g.position.set(c[3], 0, c[4]); }
   const me = m.players.find((p) => p.id === myId);
-  if (m.me && m.me.streak !== lastStreak) { if (m.me.streak > 0 && m.me.streak % 3 === 0) { toast(`🔥 ${m.me.streak} sums in a row! +25 shield`, 2500); sfx('correct'); } lastStreak = m.me.streak; }
+  if (m.me && m.me.streak !== lastStreak) { if (m.me.streak > 0 && m.me.streak % 3 === 0) { toast(`🔥 ${m.me.streak} right in a row! +25 shield`, 2500); sfx('correct'); } lastStreak = m.me.streak; }
   if (me) { if (me.hp < myHpLast && me.al) { shake = Math.min(14, shake + (myHpLast - me.hp) * 0.5); sfx('hurt'); } myHpLast = me.hp; }
   for (const e of m.events) {
     if (e.k === 'hit') { spawnSparks(e.x, 40, e.y, 8, 0xffb347, 150); if (e.who === myId) { sfx('hit'); floater(e.x, 70, e.y, String(e.dmg), '#ffd34d'); } else if (e.victim === myId) floater(e.x, 70, e.y, '-' + e.dmg, '#ff6b6b'); }
     else if (e.k === 'shot') { if (e.id !== myId) flashes.set(e.id, performance.now()); }
     else if (e.k === 'kill') { const vp = m.players.find((p) => p.n === e.victim); spawnBoom(e.x, e.y, vp ? vp.c : '#ffffff'); addFeed(`<span style="color:${e.killerColor || '#aaa'}">${esc(e.killer || 'The storm')}</span> eliminated <span style="color:${e.victimColor}">${esc(e.victim)}</span> ${e.killer ? 'with a ' + esc(e.weapon) : ''}`); if (e.victimId === myId) toast(`Eliminated by ${e.killer || 'the storm'}!`, 2500); if (e.killerId === myId) { toast(`You eliminated ${e.victim}!`, 2000); floater(e.x, 110, e.y, '+1 ELIMINATION', '#ffd34d', 22); } }
-    else if (e.k === 'answer') addFeed(`<span style="color:${e.color}">${esc(e.name)}</span> ${e.correct ? '✅ got a <b>' + esc(e.topic) + '</b> sum right' : '❌ missed a <b>' + esc(e.topic) + '</b> sum'}`);
+    else if (e.k === 'answer') addFeed(`<span style="color:${e.color}">${esc(e.name)}</span> ${e.correct ? '✅ got a <b>' + esc(e.topic) + '</b> question right' : '❌ missed a <b>' + esc(e.topic) + '</b> question'}`);
     else if (e.k === 'info') { addFeed(esc(e.msg)); if (/storm/i.test(e.msg)) toast(e.msg, 2500); }
   }
   updateHud();
@@ -146,18 +146,18 @@ function renderLobby(m) {
   for (const p of m.players) { const li = document.createElement('li'); li.innerHTML = `<span class="dot" style="background:${p.color}"></span>${esc(p.name)}${p.id === myId ? ' (you)' : ''}${p.id === m.hostId ? '<span class="tag">HOST</span>' : ''}${p.isBot ? '<span class="tag">BOT</span>' : ''}`; list.appendChild(li); }
   const isHost = m.hostId === myId;
   $('hostControls').classList.toggle('hidden', !isHost); $('waitMsg').classList.toggle('hidden', isHost);
-  $('mode').value = m.settings.mode; $('difficulty').value = m.settings.difficulty; $('bots').value = String(m.settings.bots);
+  $('mode').value = m.settings.mode; $('difficulty').value = m.settings.difficulty; $('subject').value = m.settings.subject || 'maths'; $('bots').value = String(m.settings.bots);
   $('lobbyBtn').classList.toggle('hidden', !isHost); $('goWait').classList.toggle('hidden', isHost);
 }
 function showGameOver(m) {
   hideQuestion(); if (document.pointerLockElement) document.exitPointerLock();
   $('winnerText').textContent = m.winner ? `🏆 ${m.winner.name} wins!` : 'Game over!';
-  let html = '<tr><th>Player</th><th>Eliminations</th><th>Sums right</th><th>Sums wrong</th></tr>';
+  let html = '<tr><th>Player</th><th>Eliminations</th><th>Right</th><th>Wrong</th></tr>';
   for (const p of m.board) html += `<tr><td><span class="dot" style="background:${p.color}"></span> ${esc(p.name)}${p.id === myId ? ' (you)' : ''}</td><td>${p.kills}</td><td>${p.correct}</td><td>${p.wrong}</td></tr>`;
   $('board').innerHTML = html;
-  const rep = m.reports[myId]; let r = '<b>Your maths report</b>';
+  const rep = m.reports[myId]; let r = '<b>Your report</b>';
   const topics = rep ? Object.entries(rep).sort((a, b) => (b[1].wrong - a[1].wrong) || (b[1].right - a[1].right)) : [];
-  if (!topics.length) r += '<div class="muted">No sums answered this game. Open some chests!</div>';
+  if (!topics.length) r += '<div class="muted">No questions answered this game. Open some chests!</div>';
   for (const [topic, s] of topics) r += `<div class="topic"><span>${esc(topic)}</span><span><span class="good">${s.right} right</span> · <span class="bad">${s.wrong} wrong</span></span></div>`;
   const focus = (m.focus && m.focus[myId]) || []; if (focus.length) r += `<div class="muted" style="margin-top:8px">🎯 Next game will practise: <b>${focus.map(esc).join(', ')}</b></div>`;
   $('report').innerHTML = r;
@@ -170,18 +170,22 @@ function showQuestion(m) {
   question = m; clearTimeout(resultTimeout);
   if (document.pointerLockElement) document.exitPointerLock();
   const col = RCOLOR[m.rarity] || '#fff';
-  $('qHeader').textContent = m.kind === 'respawn' ? 'SOLVE THIS TO RESPAWN' : `${RLABEL[m.rarity]} CHEST`;
+  $('qHeader').textContent = m.kind === 'respawn' ? 'ANSWER THIS TO RESPAWN' : `${RLABEL[m.rarity]} CHEST`;
   $('qHeader').style.background = col + '33'; $('qHeader').style.color = col; $('qHeader').style.border = `2px solid ${col}`;
   $('qTopic').textContent = m.topic; $('qText').textContent = m.text; $('qHint').textContent = m.hint ? 'Hint: ' + m.hint : '';
-  $('qInput').value = ''; $('qInput').disabled = false; $('qForm').classList.remove('hidden'); $('qResult').classList.add('hidden');
+  $('qText').classList.toggle('long', m.text.length > 70);
+  $('qInput').value = ''; $('qInput').disabled = false; $('qResult').classList.add('hidden');
+  const box = $('qChoices'); box.innerHTML = '';
+  if (m.choices) m.choices.forEach((c, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'choice'; b.innerHTML = `<span class="num">${i + 1}</span>${esc(c)}`; b.addEventListener('click', () => answerChoice(c)); box.appendChild(b); });
+  $('qChoices').classList.toggle('hidden', !m.choices); $('qForm').classList.toggle('hidden', !!m.choices); $('qChoices').classList.toggle('long', !!m.choices && m.choices.some((c) => c.length > 22));
   $('qCancel').classList.toggle('hidden', m.kind === 'respawn');
   qTimerStart = performance.now(); qTimerLen = m.timeLimit;
-  $('question').classList.remove('hidden'); $('question').classList.remove('resultOnly'); setTimeout(() => $('qInput').focus(), 30);
+  $('question').classList.remove('hidden'); $('question').classList.remove('resultOnly'); if (!m.choices) setTimeout(() => $('qInput').focus(), 30);
   keys = {}; shooting = false;
 }
 function hideQuestion() { question = null; clearTimeout(resultTimeout); $('question').classList.add('hidden'); $('qInput').blur(); if (phase === 'playing' && !touch.enabled && !document.pointerLockElement) { try { canvas.requestPointerLock(); } catch (e) { /* needs a click */ } } }
 function onResult(m) {
-  const box = $('qResult'); box.classList.remove('hidden'); $('qForm').classList.add('hidden'); $('qCancel').classList.add('hidden');
+  const box = $('qResult'); box.classList.remove('hidden'); $('qForm').classList.add('hidden'); $('qChoices').classList.add('hidden'); $('qCancel').classList.add('hidden');
   if (m.correct) { box.className = 'good'; box.innerHTML = `✅ Correct!${m.loot && m.loot.length ? `<small>You got: ${m.loot.map(esc).join(', ')}</small>` : ''}${m.dropped && m.dropped.length ? `<small>Bag full, left on the floor: ${m.dropped.map(esc).join(', ')}</small>` : ''}${m.kind === 'respawn' ? '<small>Respawning…</small>' : ''}`; sfx('correct'); if (m.kind === 'chest') sfx('chest'); }
   else { box.className = 'bad'; box.innerHTML = `${m.timeout ? '⏰ Out of time!' : '❌ Not quite.'}<small>The answer was <b>${esc(m.answer)}</b>${m.kind === 'respawn' ? '. Another sum is coming…' : '. The chest stays locked.'}</small>`; sfx('wrong'); }
   question = null; $('question').classList.add('resultOnly');
@@ -190,6 +194,7 @@ function onResult(m) {
 }
 $('qForm').addEventListener('submit', (e) => { e.preventDefault(); if (!question) return; const a = $('qInput').value.trim(); if (!a) return; $('qInput').disabled = true; send({ t: 'answer', a }); });
 $('qCancel').addEventListener('click', () => { if (question && question.kind === 'chest') { send({ t: 'cancel' }); hideQuestion(); } });
+function answerChoice(c) { if (!question || question.answered) return; question.answered = true; for (const b of $('qChoices').children) b.disabled = true; send({ t: 'answer', a: c }); }
 const inQuestion = () => question !== null;
 
 // ---------- HUD ----------
@@ -249,7 +254,7 @@ function updateHud() {
 const CODE_KEYS = { Space: ' ', Tab: 'tab', KeyW: 'w', KeyA: 'a', KeyS: 's', KeyD: 'd', ArrowUp: 'arrowup', ArrowDown: 'arrowdown', ArrowLeft: 'arrowleft', ArrowRight: 'arrowright', KeyE: 'e', KeyR: 'r', KeyQ: 'q', Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5' };
 const keyOf = (e) => CODE_KEYS[e.code] || e.key.toLowerCase();
 window.addEventListener('keydown', (e) => {
-  if (inQuestion()) { if (e.key === 'Escape') $('qCancel').click(); return; }
+  if (inQuestion()) { if (e.key === 'Escape') $('qCancel').click(); else if (question.choices && /^[1-4]$/.test(e.key) && question.choices[+e.key - 1]) answerChoice(question.choices[+e.key - 1]); return; }
   if (phase !== 'playing' || e.target === $('qInput') || (e.target.tagName === 'INPUT' && e.target.offsetParent !== null)) return;
   const k = keyOf(e); keys[k] = true;
   if (k >= '1' && k <= '5') send({ t: 'slot', i: +k - 1 });
@@ -321,8 +326,8 @@ $('joinBtn').addEventListener('click', () => {
 $('name').value = localStorage.getItem('mr_name') || '';
 $('name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('joinBtn').click(); });
 $('room').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('joinBtn').click(); });
-const pushSettings = () => send({ t: 'settings', mode: $('mode').value, difficulty: $('difficulty').value, bots: +$('bots').value });
-$('mode').addEventListener('change', pushSettings); $('difficulty').addEventListener('change', pushSettings); $('bots').addEventListener('change', pushSettings);
+const pushSettings = () => send({ t: 'settings', mode: $('mode').value, difficulty: $('difficulty').value, subject: $('subject').value, bots: +$('bots').value });
+$('mode').addEventListener('change', pushSettings); $('difficulty').addEventListener('change', pushSettings); $('subject').addEventListener('change', pushSettings); $('bots').addEventListener('change', pushSettings);
 $('startBtn').addEventListener('click', () => { sfx('pickup'); send({ t: 'start' }); });
 $('lobbyBtn').addEventListener('click', () => send({ t: 'lobby' }));
 

@@ -14,7 +14,7 @@
 <div id="join" class="screen">
   <div class="card">
     <h1>MATHS ROYALE</h1>
-    <p class="sub">Loot the chests. Solve the sums. Be the last one standing.</p>
+    <p class="sub">Loot the chests. Answer the questions. Be the last one standing.<br><b>Maths or English</b> — the host picks in the lobby.</p>
     <label>Your name</label>
     <input id="name" maxlength="14" placeholder="e.g. Charlie" autocomplete="off">
     <label>Room code <span class="muted">(leave blank to start a new game)</span></label>
@@ -27,8 +27,8 @@
       <b>How to play</b>
       <ul>
         <li><b>WASD</b> to move, <b>mouse</b> to look around, <b>click</b> to shoot</li>
-        <li>Walk up to a chest and press <b>E</b> — answer the sum to open it</li>
-        <li>Harder sums = better loot (grey → green → blue → purple → gold)</li>
+        <li>Walk up to a chest and press <b>E</b> — answer the question to open it</li>
+        <li>Harder questions = better loot (grey → green → blue → purple → gold)</li>
         <li><b>E</b> also picks up guns and items from the ground (swaps if your bag is full)</li>
         <li><b>1–5</b> pick an item, <b>click</b> to use bandages and shields, <b>R</b> reload, <b>Q</b> drop, <b>Space</b> jump, hold <b>Tab</b> for scores</li>
         <li>On a tablet or phone: <b>left thumb</b> moves, <b>right thumb</b> looks, <b>FIRE</b> button shoots</li>
@@ -59,10 +59,16 @@
         <h3>Game settings <span class="muted">(host only)</span></h3>
         <label>Mode</label>
         <select id="mode">
-          <option value="dm">Battle (8 min, respawn by solving a sum)</option>
+          <option value="dm">Battle (8 min, answer to respawn)</option>
           <option value="br">Battle Royale (storm, last one standing)</option>
         </select>
-        <label>Sum difficulty</label>
+        <label>Subject</label>
+        <select id="subject">
+          <option value="maths" selected>Maths</option>
+          <option value="english">English</option>
+          <option value="mix">Mix of both</option>
+        </select>
+        <label>Difficulty</label>
         <select id="difficulty">
           <option value="easy">Easier (Year 4/5)</option>
           <option value="normal" selected>Normal (Year 5/6)</option>
@@ -116,6 +122,7 @@
     <div id="qTopic"></div>
     <div id="qText"></div>
     <div id="qHint" class="muted"></div>
+    <div id="qChoices" class="hidden"></div>
     <form id="qForm" autocomplete="off">
       <input id="qInput" placeholder="Type your answer" autocomplete="off">
       <button type="submit" class="big">ANSWER</button>

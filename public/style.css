@@ -6,7 +6,7 @@ canvas#game { position: fixed; inset: 0; display: block; width: 100vw; height: 1
 .screen.overlay { background: rgba(5, 12, 22, 0.72); }
 .card { background: #16222f; border: 2px solid #2c4a6b; border-radius: 16px; padding: 28px 32px; width: min(92vw, 440px); box-shadow: 0 20px 60px rgba(0,0,0,.5); }
 .card.wide { width: min(94vw, 760px); max-height: 92vh; overflow: auto; }
-.card.q { width: min(94vw, 560px); text-align: center; }
+.card.q { width: min(94vw, 600px); text-align: center; max-height: 94vh; overflow-y: auto; }
 h1 { margin: 0 0 6px; font-size: 42px; letter-spacing: 3px; text-align: center; background: linear-gradient(#ffe259, #ff8a00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 h2 { margin: 0 0 6px; } h3 { margin: 12px 0 6px; }
 .sub { text-align: center; color: #9fb3c8; margin: 0 0 18px; }
@@ -55,6 +55,15 @@ button.link { background: none; border: 0; color: #8aa0b6; text-decoration: unde
 #qTopic { color: #9fb3c8; font-size: 14px; margin-bottom: 14px; }
 #qText { font-size: 30px; font-weight: 800; line-height: 1.3; margin: 10px 0 8px; }
 #qHint { min-height: 18px; margin-bottom: 8px; }
+#qText { white-space: pre-line; }
+#qText.long { font-size: 19px; font-weight: 600; text-align: left; }
+#qChoices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+#qChoices.long { grid-template-columns: 1fr; }
+#qChoices .choice { background: #24384c; color: #fff; border: 2px solid #3b5670; border-radius: 10px; cursor: pointer; font-family: inherit; }
+#qChoices .choice:hover:not(:disabled) { border-color: #ffd34d; }
+#qChoices .choice { margin: 0; width: 100%; padding: 12px 14px; font-size: 18px; font-weight: 700; text-align: left; display: flex; gap: 10px; align-items: center; line-height: 1.25; }
+#qChoices .choice .num { flex: none; width: 26px; height: 26px; border-radius: 6px; background: #0f1821; color: #9fb3c8; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; }
+#qChoices .choice:disabled { opacity: 0.6; }
 #qForm { display: flex; gap: 10px; align-items: stretch; } #qForm input { font-size: 26px; text-align: center; flex: 1; } #qForm button { width: auto; margin: 0; padding: 0 22px; }
 .timerbar { height: 8px; background: #0f1821; border-radius: 4px; margin-top: 14px; overflow: hidden; } #qTimer { height: 100%; background: #3b9dff; width: 100%; }
 #qResult { margin-top: 14px; padding: 14px; border-radius: 10px; font-size: 20px; font-weight: 700; }
@@ -81,7 +90,7 @@ body.touch #slots .slot { pointer-events: auto; }
   #minimap { width: 100px; height: 100px; } #status { font-size: 16px; } #aliveCount { font-size: 12px; } #feed { width: 200px; font-size: 11px; }
   .tbtn { width: 64px; height: 64px; font-size: 11px; } #touchUi { bottom: 80px; right: 10px; gap: 6px; }
   #toast { font-size: 18px; padding: 8px 14px; } #prompt { font-size: 14px; top: 62%; }
-  .card.q { padding: 14px 16px; } #qText { font-size: 22px; } #qForm input { font-size: 20px; }
+  .card.q { padding: 14px 16px; } #qText { font-size: 22px; } #qText.long { font-size: 16px; } #qChoices .choice { font-size: 15px; padding: 9px 10px; } #qForm input { font-size: 20px; }
 }
 #rotateHint { display: none; position: fixed; inset: 0; z-index: 20; background: #101a26; color: #fff; align-items: center; justify-content: center; text-align: center; font-size: 22px; font-weight: 800; padding: 20px; }
 @media (orientation: portrait) and (max-width: 600px) { body.touch #rotateHint { display: flex; } }

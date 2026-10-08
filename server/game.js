@@ -1,6 +1,8 @@
 'use strict';
 // Authoritative game simulation for one room.
 const maths = require('./maths');
+const english = require('./english');
+const BANKS = { maths, english };
 const { RARITIES, RARITY_INFO, WEAPONS, CONSUMABLES, rollRarity, makeLoot, makeWeapon, makeConsumable, itemName, rand, pick } = require('./items');
 
 const TICK_MS = 50;
@@ -90,7 +92,7 @@ class Game {
     this.code = code; this.onEmpty = onEmpty;
     this.players = new Map();
     this.phase = 'lobby'; this.hostId = null;
-    this.settings = { mode: 'dm', bots: 2, difficulty: 'normal' };
+    this.settings = { mode: 'dm', bots: 2, difficulty: 'normal', subject: 'maths' };
     this.obstacles = []; this.chests = []; this.bullets = []; this.drops = [];
     this.events = []; this.storm = null; this.startedAt = 0; this.endsAt = 0; this.endedAt = 0;
     this.colorIdx = 0;
@@ -155,6 +157,7 @@ class Game {
       case 'settings': if (p.id === this.hostId && this.phase === 'lobby') {
         if (m.mode === 'dm' || m.mode === 'br') this.settings.mode = m.mode;
         if (['easy', 'normal', 'hard'].includes(m.difficulty)) this.settings.difficulty = m.difficulty;
+        if (['maths', 'english', 'mix'].includes(m.subject)) this.settings.subject = m.subject;
         if (Number.isInteger(m.bots)) { this.settings.bots = clamp(m.bots, 0, 4); }
         this.broadcastLobby();
       } break;
@@ -280,35 +283,42 @@ class Game {
     if (p) t += p.level || 0;
     return Math.min(4, Math.max(1, t));
   }
+  // Which question bank to use: maths, english, or take turns for "mix".
+  makeQuestion(p, tier) {
+    let subject = this.settings.subject;
+    if (subject === 'mix') { p.mixTurn = !p.mixTurn; subject = p.mixTurn ? 'english' : 'maths'; }
+    const q = BANKS[subject].generate(tier, p.name, p.lastTopic, this.weakTopics(p));
+    q.subject = subject; p.lastTopic = q.topic;
+    return q;
+  }
+  askMsg(q) { return { topic: q.topic, text: q.text, hint: q.hint, choices: q.choices || null, subject: q.subject }; }
   weakTopics(p) { return Object.entries(p.history || {}).filter(([, v]) => v.wrong > v.right).map(([k]) => k); }
   tryOpenChest(p, chestId) {
     if (!p.alive || p.question || this.phase !== 'playing') return;
     const c = this.chests.find((c) => c.id === chestId); if (!c) return;
     if (c.state !== 'closed' || c.busyBy || (c.lockedUntil || 0) > now() || dist(p.x, p.y, c.x, c.y) > CHEST_RANGE) return;
-    const q = maths.generate(this.tierFor(c.rarity, p), p.name, p.lastTopic, this.weakTopics(p));
-    p.lastTopic = q.topic;
+    const q = this.makeQuestion(p, this.tierFor(c.rarity, p));
     c.busyBy = p.id;
-    const limit = QUESTION_MS + (q.tier - 1) * 10000;
+    const limit = QUESTION_MS + (q.tier - 1) * 10000 + (q.extraMs || 0);
     p.question = { kind: 'chest', chestId: c.id, q, deadline: now() + limit };
-    send(p.ws, { t: 'question', kind: 'chest', chestId: c.id, rarity: c.rarity, topic: q.topic, text: q.text, hint: q.hint, timeLimit: limit });
+    send(p.ws, { t: 'question', kind: 'chest', chestId: c.id, rarity: c.rarity, ...this.askMsg(q), timeLimit: limit });
   }
   askRespawn(p) {
-    const q = maths.generate(Math.min(4, Math.max(1, (this.settings.difficulty === 'hard' ? 2 : 1) + Math.max(0, p.level || 0))), p.name, p.lastTopic, this.weakTopics(p));
-    p.lastTopic = q.topic;
+    const q = this.makeQuestion(p, Math.min(4, Math.max(1, (this.settings.difficulty === 'hard' ? 2 : 1) + Math.max(0, p.level || 0))));
     p.question = { kind: 'respawn', q, deadline: now() + QUESTION_MS * 2 };
-    send(p.ws, { t: 'question', kind: 'respawn', rarity: 'common', topic: q.topic, text: q.text, hint: q.hint, timeLimit: QUESTION_MS * 2 });
+    send(p.ws, { t: 'question', kind: 'respawn', rarity: 'common', ...this.askMsg(q), timeLimit: QUESTION_MS * 2 });
   }
   recordAnswer(p, q, correct) {
     const h = (p.history[q.topic] ||= { right: 0, wrong: 0 }); if (correct) h.right++; else h.wrong++;
-    if (correct) { p.runRight++; p.runWrong = 0; if (p.runRight >= 3 && p.level < 1) { p.level++; p.runRight = 0; send(p.ws, { t: 'toast', msg: '📈 Nice! Your sums are getting harder (and the loot better).' }); } }
-    else { p.runWrong++; p.runRight = 0; if (p.runWrong >= 2 && p.level > -1) { p.level--; p.runWrong = 0; send(p.ws, { t: 'toast', msg: '📉 No worries, the next sums will be a bit easier.' }); } }
-    if (correct) { p.correct++; p.streak = (p.streak || 0) + 1; if (p.streak % 3 === 0 && p.alive) { p.shield = Math.min(100, p.shield + 25); this.pushEvent({ k: 'info', msg: `🔥 ${p.name} is on a ${p.streak}-sum streak! +25 shield` }); } }
+    if (correct) { p.runRight++; p.runWrong = 0; if (p.runRight >= 3 && p.level < 1) { p.level++; p.runRight = 0; send(p.ws, { t: 'toast', msg: '📈 Nice! Your questions are getting harder (and the loot better).' }); } }
+    else { p.runWrong++; p.runRight = 0; if (p.runWrong >= 2 && p.level > -1) { p.level--; p.runWrong = 0; send(p.ws, { t: 'toast', msg: '📉 No worries, the next questions will be a bit easier.' }); } }
+    if (correct) { p.correct++; p.streak = (p.streak || 0) + 1; if (p.streak % 3 === 0 && p.alive) { p.shield = Math.min(100, p.shield + 25); this.pushEvent({ k: 'info', msg: `🔥 ${p.name} got ${p.streak} right in a row! +25 shield` }); } }
     else { p.wrong++; p.streak = 0; }
     const t = (p.byTopic[q.topic] ||= { right: 0, wrong: 0 }); if (correct) t.right++; else t.wrong++;
   }
   answer(p, raw) {
     const qs = p.question; if (!qs) return;
-    const correct = maths.check(qs.q, raw);
+    const correct = BANKS[qs.q.subject || 'maths'].check(qs.q, raw);
     this.recordAnswer(p, qs.q, correct);
     this.pushEvent({ k: 'answer', name: p.name, color: p.color, correct, topic: qs.q.topic });
     if (qs.kind === 'chest') {

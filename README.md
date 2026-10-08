@@ -15,8 +15,14 @@ out is to answer sums. Harder sums unlock better loot:
 | Purple | Percentages of amounts, area, angles, division with remainders, mixed numbers, comparing fractions, square numbers, primes/factors/multiples, sequences, time | Strong guns, medkits |
 | Gold | Long multiplication, long division, BIDMAS, multiplying fractions, ratio, algebra, mean, decimals, angles in shapes, money problems | The best guns, full shields |
 
+**English mode:** the host can switch the lobby's *Subject* to **English** or **Mix**. Chests then ask
+multiple-choice English questions from Year 5/6: word classes, verbs turned into adjectives, adverbs
+(including adverbs of possibility), expanded noun phrases, tenses, powerful vocabulary, literary techniques,
+biographies of significant Black figures, inference and the author's word choices. Press 1–4 or tap to answer.
+English questions live in `server/english.js`.
+
 Wrong answers show the correct answer, and at the end of each game every player gets a
-**maths report** showing which topics they got right and wrong.
+**report** showing which topics they got right and wrong.
 
 ## Quick start (one computer)
 
