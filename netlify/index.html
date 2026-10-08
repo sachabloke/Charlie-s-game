@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Charlie's English</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap">
+<style>
+/* Layout: one centred column like an exercise-book page; ink-blue cover, highlighter yellow marks the active thing. */
+:root {
+  --bg: #eef3f8;
+  --paper: #ffffff;
+  --ink: #17324d;
+  --muted: #5d7186;
+  --line: #d5e0ea;
+  --accent: #2f6fd6;
+  --accent-ink: #ffffff;
+  --mark: #ffe066;
+  --good: #1f9d57;
+  --good-bg: #e3f6eb;
+  --bad: #d64545;
+  --bad-bg: #fdeaea;
+  --chip: #e6eef7;
+  --display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Nunito", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1a26; --paper: #172636; --ink: #e8f0f8; --muted: #9db0c3; --line: #2a3d51;
+    --accent: #5b95f0; --accent-ink: #0b1622; --mark: #ffd84d; --good: #4fd18b; --good-bg: #163527;
+    --bad: #ff7b7b; --bad-bg: #3a1c1f; --chip: #20344a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1a26; --paper: #172636; --ink: #e8f0f8; --muted: #9db0c3; --line: #2a3d51;
+  --accent: #5b95f0; --accent-ink: #0b1622; --mark: #ffd84d; --good: #4fd18b; --good-bg: #163527;
+  --bad: #ff7b7b; --bad-bg: #3a1c1f; --chip: #20344a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.5; }
+.wrap { max-width: 680px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 48px; display: grid; gap: 18px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; margin: 0; text-wrap: balance; line-height: 1.15; }
+h1 { font-size: 34px; }
+h2 { font-size: 24px; }
+h3 { font-size: 19px; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.hl { background: linear-gradient(transparent 55%, var(--mark) 55%); padding: 0 2px; color: inherit; }
+button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--mark); outline-offset: 2px; }
+.btn { font-family: var(--display); font-weight: 600; font-size: 19px; padding: 14px 22px; border-radius: 14px; background: var(--accent); color: var(--accent-ink); box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 60%, #000); transition: transform .08s; }
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 60%, #000); }
+.btn.ghost { background: var(--chip); color: var(--ink); box-shadow: none; }
+.btn.wide { width: 100%; }
+
+header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.levels { display: flex; gap: 6px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 4px; }
+.levels button { padding: 6px 12px; border-radius: 9px; font-weight: 800; font-size: 14px; color: var(--muted); }
+.levels button[aria-pressed="true"] { background: var(--mark); color: #2a2300; }
+
+.hero { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 20px; display: grid; gap: 14px; }
+.topics { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.topic { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 8px; min-width: 0; }
+.topic .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.topic .row button { padding: 7px 14px; border-radius: 10px; font-weight: 800; font-size: 15px; background: var(--chip); }
+.topic .row button.go { background: var(--accent); color: var(--accent-ink); }
+.best { font-size: 13px; font-weight: 800; padding: 2px 8px; border-radius: 99px; background: var(--chip); color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+.best.good { background: var(--good-bg); color: var(--good); }
+.best.weak { background: var(--bad-bg); color: var(--bad); }
+
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 20px; display: grid; gap: 14px; }
+.bar { height: 10px; background: var(--chip); border-radius: 99px; overflow: hidden; }
+.bar > div { height: 100%; background: var(--accent); border-radius: 99px; transition: width .3s; }
+.qmeta { display: flex; justify-content: space-between; gap: 8px; font-weight: 800; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag { font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); }
+.qtext { font-size: 21px; font-weight: 700; white-space: pre-line; }
+.qtext.long { font-size: 18px; font-weight: 600; }
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.choices.long { grid-template-columns: 1fr; }
+.choice { text-align: left; display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 12px; border: 2px solid var(--line); background: var(--paper); font-weight: 800; font-size: 18px; line-height: 1.3; min-width: 0; }
+.choice:hover:not(:disabled) { border-color: var(--accent); }
+.choice .n { flex: none; width: 26px; height: 26px; border-radius: 7px; background: var(--chip); color: var(--muted); font-size: 14px; display: inline-flex; align-items: center; justify-content: center; }
+.choice.right { border-color: var(--good); background: var(--good-bg); }
+.choice.wrong { border-color: var(--bad); background: var(--bad-bg); }
+.choice:disabled { cursor: default; }
+.typed { display: flex; gap: 10px; flex-wrap: wrap; }
+.typed input { flex: 1 1 200px; min-width: 0; font: inherit; font-size: 20px; font-weight: 700; padding: 12px 14px; border-radius: 12px; border: 2px solid var(--line); background: var(--paper); color: var(--ink); }
+.feedback { border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; }
+.feedback.good { background: var(--good-bg); }
+.feedback.bad { background: var(--bad-bg); }
+.feedback strong { font-family: var(--display); font-size: 20px; font-weight: 600; }
+.feedback.good strong { color: var(--good); }
+.feedback.bad strong { color: var(--bad); }
+.hint { font-size: 15px; color: var(--muted); }
+
+.lesson { display: grid; gap: 12px; }
+.lesson ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.example { background: var(--chip); border-radius: 12px; padding: 10px 14px; }
+
+.score { font-family: var(--display); font-size: 56px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.stars { font-size: 30px; letter-spacing: 4px; color: var(--mark); -webkit-text-stroke: 1px color-mix(in srgb, var(--mark) 50%, #000); }
+.results { display: grid; gap: 6px; }
+.results .r { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-weight: 700; }
+.results .r span:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.actions .btn { flex: 1 1 200px; }
+.review { display: grid; gap: 10px; }
+.review .item { border-left: 4px solid var(--bad); padding: 4px 0 4px 12px; font-size: 15px; }
+.review .item b { display: block; white-space: pre-line; }
+
+@media (max-width: 480px) {
+  h1 { font-size: 28px; }
+  .choices { grid-template-columns: 1fr; }
+  .qtext { font-size: 19px; }
+  .qtext.long { font-size: 16px; }
+  .choice { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app"></div>
+
+<script>
+'use strict';
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const shuffle = (arr) => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const sample = (arr, n) => shuffle(arr).slice(0, n);
+const mc = (text, answer, wrong, extra = {}) => ({ text, kind: 'choice', answer, choices: shuffle([answer, ...sample([...new Set(wrong)].filter((w) => w !== answer), 3)]), ...extra });
+const typed = (text, accept, extra = {}) => ({ text, kind: 'typed', answer: accept[0], accept, ...extra });
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const SENTENCES = [
+  { s: 'The ancient castle loomed silently over the valley.', noun: 'castle', verb: 'loomed', adjective: 'ancient', adverb: 'silently' },
+  { s: 'A hungry fox crept cautiously through the hedge.', noun: 'fox', verb: 'crept', adjective: 'hungry', adverb: 'cautiously' },
+  { s: 'The icy wind howled angrily around the cottage.', noun: 'cottage', verb: 'howled', adjective: 'icy', adverb: 'angrily' },
+  { s: 'Golden sunlight danced gently on the lake.', noun: 'lake', verb: 'danced', adjective: 'Golden', adverb: 'gently' },
+  { s: 'The nervous explorer stepped slowly into the cave.', noun: 'cave', verb: 'stepped', adjective: 'nervous', adverb: 'slowly' },
+  { s: 'Huge waves crashed violently against the rocks.', noun: 'rocks', verb: 'crashed', adjective: 'Huge', adverb: 'violently' },
+  { s: 'The tiny robin sang cheerfully from the branch.', noun: 'robin', verb: 'sang', adjective: 'tiny', adverb: 'cheerfully' },
+  { s: 'A mysterious figure waited patiently by the gate.', noun: 'gate', verb: 'waited', adjective: 'mysterious', adverb: 'patiently' },
+  { s: 'The exhausted runner collapsed suddenly on the grass.', noun: 'grass', verb: 'collapsed', adjective: 'exhausted', adverb: 'suddenly' },
+  { s: 'Thick fog drifted lazily across the moor.', noun: 'moor', verb: 'drifted', adjective: 'Thick', adverb: 'lazily' },
+  { s: 'The brave knight rode proudly into the village.', noun: 'village', verb: 'rode', adjective: 'brave', adverb: 'proudly' },
+  { s: 'A gloomy forest stretched endlessly towards the mountains.', noun: 'mountains', verb: 'stretched', adjective: 'gloomy', adverb: 'endlessly' },
+  { s: 'The curious kitten pounced playfully on the string.', noun: 'string', verb: 'pounced', adjective: 'curious', adverb: 'playfully' },
+  { s: 'Crisp leaves swirled wildly in the playground.', noun: 'playground', verb: 'swirled', adjective: 'Crisp', adverb: 'wildly' },
+  { s: 'The old door creaked loudly in the darkness.', noun: 'darkness', verb: 'creaked', adjective: 'old', adverb: 'loudly' },
+  { s: 'A shimmering river flowed quietly past the mill.', noun: 'mill', verb: 'flowed', adjective: 'shimmering', adverb: 'quietly' },
+  { s: 'The furious giant stamped heavily across the bridge.', noun: 'bridge', verb: 'stamped', adjective: 'furious', adverb: 'heavily' },
+  { s: 'Bright stars twinkled faintly above the desert.', noun: 'desert', verb: 'twinkled', adjective: 'Bright', adverb: 'faintly' },
+];
+const CLASSES = ['noun', 'verb', 'adjective', 'adverb'];
+const FAMILIES = [
+  ['bravely', 'brave', 'bravery'], ['happily', 'happy', 'happiness'], ['angrily', 'angry', 'anger'],
+  ['silently', 'silent', 'silence'], ['proudly', 'proud', 'pride'], ['curiously', 'curious', 'curiosity'],
+  ['beautifully', 'beautiful', 'beauty'], ['dangerously', 'dangerous', 'danger'], ['mysteriously', 'mysterious', 'mystery'],
+  ['nervously', 'nervous', 'nerves'], ['gracefully', 'graceful', 'grace'], ['powerfully', 'powerful', 'power'],
+];
+const PLAIN_VERBS = ['whisper', 'gallop', 'shiver', 'explore', 'tumble', 'scramble', 'wander', 'giggle'];
+const VERB_ADJ = [
+  { verb: 'sparkle', adj: ['sparkling'], s: 'The ___ sea stretched out to the horizon.' },
+  { verb: 'crumble', adj: ['crumbling', 'crumbled'], s: 'Ivy covered the ___ walls of the old tower.' },
+  { verb: 'freeze', adj: ['frozen', 'freezing'], s: 'We skated across the ___ pond.' },
+  { verb: 'break', adj: ['broken'], s: 'The wind whistled through the ___ window.' },
+  { verb: 'twist', adj: ['twisted', 'twisting'], s: 'The ___ branches clawed at the sky.' },
+  { verb: 'abandon', adj: ['abandoned'], s: 'Nobody had lived in the ___ house for years.' },
+  { verb: 'tower', adj: ['towering'], s: 'The ___ cliffs cast long shadows over the beach.' },
+  { verb: 'flicker', adj: ['flickering', 'flickered'], s: 'The ___ candle lit up the cellar.' },
+  { verb: 'haunt', adj: ['haunted', 'haunting'], s: 'Everyone said the ___ mansion was full of ghosts.' },
+  { verb: 'scorch', adj: ['scorched', 'scorching'], s: 'Nothing grew on the ___ earth of the desert.' },
+  { verb: 'gleam', adj: ['gleaming'], s: 'A ___ sword lay on the stone table.' },
+  { verb: 'rot', adj: ['rotten', 'rotting'], s: 'The ___ planks of the bridge snapped under his feet.' },
+  { verb: 'enchant', adj: ['enchanted', 'enchanting'], s: 'Deep in the ___ forest, the trees could talk.' },
+  { verb: 'shimmer', adj: ['shimmering'], s: 'A ___ mist hung over the lake.' },
+  { verb: 'howl', adj: ['howling'], s: 'The ___ wind rattled the shutters.' },
+  { verb: 'shatter', adj: ['shattered'], s: 'Pieces of ___ glass glittered on the floor.' },
+  { verb: 'sway', adj: ['swaying'], s: 'The ___ palm trees bent in the breeze.' },
+  { verb: 'terrify', adj: ['terrified', 'terrifying'], s: 'The ___ villagers hid inside their homes.' },
+];
+const VERB_ADJ_SPOT = [
+  { s: 'The crumbling bridge wobbled as we crossed.', w: 'crumbling', others: ['bridge', 'wobbled', 'crossed'] },
+  { s: 'A howling wolf woke the sleeping campers.', w: 'howling', others: ['wolf', 'woke', 'campers'] },
+  { s: 'Broken branches blocked the narrow path.', w: 'Broken', others: ['branches', 'blocked', 'path'] },
+  { s: 'The twinkling lights filled the hall with colour.', w: 'twinkling', others: ['lights', 'filled', 'colour'] },
+  { s: 'Frozen puddles cracked under our boots.', w: 'Frozen', others: ['puddles', 'cracked', 'boots'] },
+  { s: 'The abandoned ship drifted towards the shore.', w: 'abandoned', others: ['ship', 'drifted', 'shore'] },
+];
+const POSSIBILITY_LOW = ['perhaps', 'possibly', 'maybe'];
+const POSSIBILITY_HIGH = ['definitely', 'certainly', 'clearly', 'obviously'];
+const POSSIBILITY_ALL = [...POSSIBILITY_LOW, ...POSSIBILITY_HIGH, 'probably', 'surely'];
+const NOT_POSSIBILITY = ['quickly', 'yesterday', 'loudly', 'carefully', 'outside', 'soon', 'gently', 'everywhere'];
+const ENP = [
+  { p: 'the gnarled old oak tree', head: 'tree', others: ['gnarled', 'old', 'the'] },
+  { p: 'a crumbling stone wall covered in ivy', head: 'wall', others: ['crumbling', 'covered', 'ivy'] },
+  { p: 'the silver dragon with emerald eyes', head: 'dragon', others: ['silver', 'emerald', 'eyes'] },
+  { p: 'a tiny wooden boat bobbing on the waves', head: 'boat', others: ['tiny', 'wooden', 'waves'] },
+  { p: 'the dark, damp cave beneath the mountain', head: 'cave', others: ['dark', 'damp', 'mountain'] },
+  { p: 'an enormous spider with hairy legs', head: 'spider', others: ['enormous', 'hairy', 'legs'] },
+  { p: 'the bustling market in the town square', head: 'market', others: ['bustling', 'town', 'square'] },
+  { p: 'a rusty iron key under the doormat', head: 'key', others: ['rusty', 'iron', 'doormat'] },
+];
+const NOT_ENP = ['the tree', 'a dragon', 'ran very fast', 'under the bridge', 'quickly and quietly', 'was jumping', 'a cave', 'after lunch', 'shouted loudly'];
+const VERBS = [
+  { base: 'climb', s: 'climbs', past: 'climbed', ing: 'climbing', pp: 'climbed', obj: 'the mountain' },
+  { base: 'write', s: 'writes', past: 'wrote', ing: 'writing', pp: 'written', obj: 'a letter' },
+  { base: 'eat', s: 'eats', past: 'ate', ing: 'eating', pp: 'eaten', obj: 'the sandwich' },
+  { base: 'find', s: 'finds', past: 'found', ing: 'finding', pp: 'found', obj: 'the treasure' },
+  { base: 'build', s: 'builds', past: 'built', ing: 'building', pp: 'built', obj: 'a den' },
+  { base: 'explore', s: 'explores', past: 'explored', ing: 'exploring', pp: 'explored', obj: 'the cave' },
+  { base: 'paint', s: 'paints', past: 'painted', ing: 'painting', pp: 'painted', obj: 'a picture' },
+  { base: 'sing', s: 'sings', past: 'sang', ing: 'singing', pp: 'sung', obj: 'a song' },
+  { base: 'draw', s: 'draws', past: 'drew', ing: 'drawing', pp: 'drawn', obj: 'a map' },
+  { base: 'catch', s: 'catches', past: 'caught', ing: 'catching', pp: 'caught', obj: 'the ball' },
+  { base: 'throw', s: 'throws', past: 'threw', ing: 'throwing', pp: 'thrown', obj: 'the frisbee' },
+  { base: 'read', s: 'reads', past: 'read', ing: 'reading', pp: 'read', obj: 'a comic' },
+];
+const SUBJECTS = ['The explorer', 'My sister', 'The fox', 'Our teacher', 'The pirate', 'Grandad'];
+const TENSES = {
+  'simple present': (v) => v.s,
+  'simple past': (v) => v.past,
+  'future': (v) => `will ${v.base}`,
+  'present progressive': (v) => `is ${v.ing}`,
+  'past progressive': (v) => `was ${v.ing}`,
+  'present perfect': (v) => `has ${v.pp}`,
+  'past perfect': (v) => `had ${v.pp}`,
+};
+const SYNONYMS = [
+  ['big', ['enormous', 'colossal', 'immense', 'gigantic']], ['small', ['tiny', 'minuscule', 'miniature']],
+  ['scared', ['terrified', 'petrified', 'horrified']], ['happy', ['delighted', 'elated', 'overjoyed', 'jubilant']],
+  ['sad', ['miserable', 'heartbroken', 'sorrowful']], ['angry', ['furious', 'livid', 'enraged']],
+  ['cold', ['freezing', 'icy', 'frosty', 'bitter']], ['dark', ['gloomy', 'murky', 'shadowy', 'pitch-black']],
+  ['old', ['ancient', 'antique', 'crumbling']], ['shiny', ['gleaming', 'glistening', 'dazzling']],
+  ['loud', ['deafening', 'thunderous', 'ear-splitting']], ['tired', ['exhausted', 'weary', 'drained']],
+  ['hot', ['scorching', 'sweltering', 'blazing']], ['quiet', ['silent', 'hushed', 'peaceful']],
+  ['fast', ['swift', 'rapid', 'speedy']], ['brave', ['courageous', 'fearless', 'heroic']],
+  ['strange', ['peculiar', 'bizarre', 'odd']], ['wet', ['soaked', 'drenched', 'sodden']],
+];
+const SAID = [['said quietly', ['whispered', 'murmured', 'muttered']], ['said loudly', ['bellowed', 'roared', 'yelled']], ['said sadly', ['sobbed', 'wept', 'wailed']], ['said happily', ['giggled', 'chuckled', 'beamed']]];
+const WALKED = [['walked slowly', ['trudged', 'plodded', 'dawdled']], ['walked quietly', ['crept', 'tiptoed', 'sneaked']], ['walked quickly', ['dashed', 'hurried', 'raced']], ['walked proudly', ['strutted', 'marched', 'paraded']]];
+const TECHNIQUES = {
+  simile: ['The snow was as white as a sheet.', 'He ran like a cheetah chasing its dinner.', 'Her eyes sparkled like diamonds.', 'The classroom was as noisy as a zoo.', 'The clouds drifted like cotton wool across the sky.'],
+  metaphor: ['The moon was a silver coin in the sky.', 'My brother is a couch potato.', 'The classroom was a zoo.', 'The stars were diamonds scattered on black velvet.', 'Time is a thief.'],
+  personification: ['The wind whispered secrets through the trees.', 'The old house groaned in the storm.', 'The sun smiled down on the beach.', 'The flames danced in the fireplace.', 'The angry sea swallowed the little boat.'],
+  alliteration: ['Seven slippery snakes slid silently south.', 'The big brown bear bounced on the bed.', 'Dark, dangerous dungeons lay deep below.', 'Freezing fog filled the forest.', 'Peter picked a perfect pumpkin.'],
+  onomatopoeia: ['Crash! The plates smashed onto the floor.', 'The bees buzzed around the flowers.', 'Splash! Charlie jumped into the pool.', 'The door creaked and the floorboards thudded.', 'Bang! The firework exploded.'],
+  hyperbole: ['I have told you a million times!', 'This bag weighs a tonne.', 'I am so hungry I could eat a horse.', 'I waited forever for the bus.', 'My teacher is older than the dinosaurs.'],
+};
+const CONTEXT = [
+  { s: 'After walking all day without food, the knight was famished.', w: 'famished', a: 'very hungry', x: ['very tired', 'very angry', 'very lost'] },
+  { s: 'The cave was so dark and murky that we could barely see.', w: 'murky', a: 'dark and hard to see through', x: ['very wet', 'very small', 'bright and sunny'] },
+  { s: 'The children were elated when they won the competition.', w: 'elated', a: 'extremely happy', x: ['very confused', 'a little bored', 'very nervous'] },
+  { s: 'The explorer peered cautiously around the corner.', w: 'cautiously', a: 'carefully, watching for danger', x: ['very quickly', 'noisily', 'angrily'] },
+  { s: 'Rain fell incessantly for three whole weeks.', w: 'incessantly', a: 'without stopping', x: ['very lightly', 'only at night', 'sideways'] },
+  { s: 'The ruined castle was desolate; not a single person lived there.', w: 'desolate', a: 'empty and lonely', x: ['busy and crowded', 'brand new', 'brightly painted'] },
+  { s: 'She was reluctant to jump into the freezing water.', w: 'reluctant', a: 'not wanting to do something', x: ['very excited', 'unable to swim', 'in a hurry'] },
+  { s: 'The thief vanished into the crowd before anyone could catch him.', w: 'vanished', a: 'disappeared', x: ['shouted', 'fell over', 'stood still'] },
+  { s: 'The meadow was tranquil, with only the hum of bees to be heard.', w: 'tranquil', a: 'calm and peaceful', x: ['noisy and busy', 'dangerous', 'muddy'] },
+  { s: 'Charlie was baffled by the riddle and could not work it out.', w: 'baffled', a: 'confused', x: ['amused', 'bored', 'frightened'] },
+  { s: 'The giant\'s footsteps were so colossal they shook the houses.', w: 'colossal', a: 'extremely large', x: ['very quiet', 'very quick', 'very gentle'] },
+  { s: 'The soldiers were weary after marching through the night.', w: 'weary', a: 'very tired', x: ['very brave', 'very hungry', 'very cheerful'] },
+  { s: 'The ancient map was so fragile that it tore when touched.', w: 'fragile', a: 'easily broken or damaged', x: ['very valuable', 'very large', 'easy to read'] },
+  { s: 'The crowd was jubilant as the team lifted the trophy.', w: 'jubilant', a: 'full of joy and celebration', x: ['silent and sad', 'worried', 'sleepy'] },
+];
+const INFERENCE = [
+  { p: 'Mia stared at the floor. Her hands twisted the hem of her jumper as the teacher read out the test results.', q: 'How is Mia most likely feeling?', a: 'nervous', x: ['excited', 'bored', 'angry'] },
+  { p: 'Jake flung his bag across the room, stomped up the stairs and slammed his bedroom door.', q: 'How is Jake most likely feeling?', a: 'furious', x: ['sleepy', 'proud', 'calm'] },
+  { p: 'Grandma\'s eyes filled with tears as she hugged the old photograph to her chest and smiled.', q: 'Which best describes how Grandma feels?', a: 'happy memories mixed with sadness', x: ['angry at the photograph', 'scared of the photograph', 'bored and tired'] },
+  { p: 'Leo hid the broken vase behind the sofa and whistled loudly when his mum walked in.', q: 'Why did Leo whistle loudly?', a: 'to look innocent so Mum would not suspect him', x: ['because he was practising music', 'because he was calling the dog', 'because he was very tired'] },
+  { p: 'Amara checked the clock for the tenth time, tapping her foot. The bus was already twenty minutes late.', q: 'Which word best describes Amara?', a: 'impatient', x: ['relaxed', 'sleepy', 'joyful'] },
+  { p: 'Sam shared his last biscuit with the new boy, who had sat alone all lunchtime.', q: 'What does this tell us about Sam?', a: 'he is kind and thoughtful', x: ['he does not like biscuits', 'he is very greedy', 'he wants to be left alone'] },
+  { p: '"Oh, brilliant," muttered Priya, as the rain began to pour on her brand-new trainers.', q: 'What does Priya really mean when she says "brilliant"?', a: 'she is annoyed (she is being sarcastic)', x: ['she thinks the rain is brilliant', 'she loves her wet trainers', 'she wants it to rain more'] },
+  { p: 'The two friends hadn\'t spoken for a week. When Ellie walked into the room, Zara turned away and picked up a book.', q: 'What can you infer about Ellie and Zara?', a: 'they have fallen out', x: ['they are best friends today', 'they have never met', 'they are both very sleepy'] },
+  { p: 'Ben\'s legs shook as he climbed the ladder to the top diving board. He gripped the rail so tightly his knuckles went white.', q: 'Which evidence BEST shows Ben is scared?', a: 'he gripped the rail so tightly his knuckles went white', x: ['he climbed the ladder', 'it was the top diving board', 'he was at the swimming pool'] },
+  { p: 'Without a word, Dad placed a steaming mug of hot chocolate beside Tom, who was still shivering after the long walk home in the snow.', q: 'Why did Dad bring the hot chocolate?', a: 'to warm Tom up and look after him', x: ['because Dad was thirsty', 'to punish Tom', 'because it was Tom\'s birthday'] },
+];
+const EFFECTS = [
+  { s: 'The wind howled through the trees.', w: 'howled', a: 'It makes the wind sound wild, like an animal, creating a scary mood.', x: ['It tells us the time of day.', 'It shows the trees were small.', 'It makes the scene feel calm and safe.'] },
+  { s: 'The children crept along the corridor.', w: 'crept', a: 'It shows they were moving slowly and quietly so they would not be noticed.', x: ['It shows they were running as fast as they could.', 'It shows they were singing.', 'It tells us the corridor was long.'] },
+  { s: 'The lion devoured its meal.', w: 'devoured', a: 'It shows the lion ate hungrily and greedily.', x: ['It shows the lion ate politely.', 'It shows the lion was not hungry.', 'It tells us what the meal was.'] },
+  { s: 'Rain hammered on the roof all night.', w: 'hammered', a: 'It shows the rain was heavy and loud.', x: ['It shows someone was building the roof.', 'It shows the rain was light and gentle.', 'It shows the roof was made of metal.'] },
+  { s: 'The old man shuffled to the door.', w: 'shuffled', a: 'It shows he walked slowly, dragging his feet, maybe because he was old or tired.', x: ['It shows he sprinted to the door.', 'It shows he was playing cards.', 'It shows he was excited.'] },
+  { s: 'Her voice was a whisper, barely there.', w: 'whisper', a: 'It shows she was speaking very quietly, perhaps because she was scared or weak.', x: ['It shows she was shouting angrily.', 'It shows she was singing loudly.', 'It shows she was laughing.'] },
+  { s: 'The castle loomed over the village.', w: 'loomed', a: 'It makes the castle seem huge and threatening.', x: ['It makes the castle seem small and friendly.', 'It shows the castle was falling down.', 'It shows the castle was far away and hard to see.'] },
+  { s: 'Charlie snatched the last slice of pizza.', w: 'snatched', a: 'It shows he grabbed it quickly and greedily.', x: ['It shows he offered it to a friend.', 'It shows he took it slowly and politely.', 'It shows he did not like pizza.'] },
+];
+
+// ---------- topics: a lesson + question makers (level 1 = easiest ... 4 = hardest) ----------
+const TOPICS = [
+  {
+    id: 'classes', name: 'Word classes', blurb: 'Nouns, verbs, adjectives and adverbs',
+    lesson: `<ul>
+      <li><b>Noun</b>: a person, place or thing. <span class="hl">castle</span>, <span class="hl">fox</span>, <span class="hl">lake</span></li>
+      <li><b>Verb</b>: a doing or being word. <span class="hl">crept</span>, <span class="hl">howled</span>, <span class="hl">is</span></li>
+      <li><b>Adjective</b>: describes a noun. <span class="hl">ancient</span> castle, <span class="hl">icy</span> wind</li>
+      <li><b>Adverb</b>: tells you how, when or where a verb happens. Many end in <b>-ly</b>. crept <span class="hl">cautiously</span></li></ul>
+      <div class="example">The <b>ancient</b> (adjective) <b>castle</b> (noun) <b>loomed</b> (verb) <b>silently</b> (adverb) over the valley.</div>`,
+    tip: 'Noun = thing. Verb = action. Adjective = describes a noun. Adverb = describes how the action happens.',
+    makers: [
+      [1, () => { const x = pick(SENTENCES); const cls = pick(CLASSES); return mc(`Which word is the ${cls.toUpperCase()} in this sentence?\n"${x.s}"`, x[cls], CLASSES.filter((c) => c !== cls).map((c) => x[c])); }],
+      [1, () => { const x = pick(SENTENCES); const cls = pick(CLASSES); return mc(`"${x.s}"\nWhat word class is "${x[cls]}"?`, cls, CLASSES.filter((c) => c !== cls)); }],
+      [1, () => { const f = pick(FAMILIES); return mc('Which of these words is an ADVERB?', f[0], [f[1], f[2], pick(PLAIN_VERBS)]); }],
+      [1, () => { const f = pick(FAMILIES); return mc('Which of these words is an ADJECTIVE?', f[1], [f[0], f[2], pick(PLAIN_VERBS)]); }],
+      [2, () => { const f = pick(FAMILIES); return mc(`Which word is a NOUN?`, f[2], [f[0], f[1], pick(PLAIN_VERBS)]); }],
+    ],
+  },
+  {
+    id: 'verbadj', name: 'Verbs into adjectives', blurb: 'sparkle → sparkling, break → broken',
+    lesson: `<p>You can turn many verbs into adjectives to make settings more vivid. Usually you add <b>-ing</b> or <b>-ed</b> (or a special ending like <b>-en</b>).</p>
+      <ul><li>sparkle → the <span class="hl">sparkling</span> sea</li><li>crumble → the <span class="hl">crumbling</span> wall</li><li>abandon → the <span class="hl">abandoned</span> house</li><li>break → the <span class="hl">broken</span> window</li><li>freeze → the <span class="hl">frozen</span> pond</li></ul>
+      <div class="example">If the word comes just before a noun and describes it, it is working as an adjective.</div>`,
+    tip: 'A verb becomes an adjective when it sits before a noun and describes it: the howling wind.',
+    makers: [
+      [2, () => { const x = pick(VERB_ADJ); return typed(`Turn the verb "${x.verb}" into an adjective to fill the gap:\n${x.s}`, x.adj, { hint: 'Try adding -ing or -ed.' }); }],
+      [2, () => { const x = pick(VERB_ADJ_SPOT); return mc(`A verb has been turned into an adjective. Which word is it?\n"${x.s}"`, x.w, x.others); }],
+    ],
+  },
+  {
+    id: 'adverbs', name: 'Adverbs of possibility', blurb: 'perhaps, probably, definitely',
+    lesson: `<p>Adverbs of possibility show <b>how sure</b> the writer is.</p>
+      <ul><li>Not sure: <span class="hl">perhaps</span>, <span class="hl">maybe</span>, <span class="hl">possibly</span></li><li>Fairly sure: <span class="hl">probably</span></li><li>Very sure: <span class="hl">definitely</span>, <span class="hl">certainly</span>, <span class="hl">clearly</span>, <span class="hl">obviously</span></li></ul>
+      <p>Modal verbs do the same job: <b>might / could / may</b> (possible) and <b>will / must</b> (certain).</p>
+      <div class="example"><b>Perhaps</b> it will snow. → not sure<br>It will <b>definitely</b> snow. → very sure</div>`,
+    tip: 'perhaps / maybe / possibly = not sure. probably = fairly sure. definitely / certainly = very sure.',
+    makers: [
+      [2, () => mc('Which word is an adverb of POSSIBILITY?', pick(POSSIBILITY_ALL), NOT_POSSIBILITY, { hint: 'It tells you how likely something is.' })],
+      [2, () => mc('Which adverb shows the writer is MOST sure?', pick(['definitely', 'certainly']), POSSIBILITY_LOW)],
+      [2, () => mc('Which adverb shows the writer is LEAST sure?', pick(POSSIBILITY_LOW), POSSIBILITY_HIGH)],
+      [2, () => { const [s, low] = pick([['___ it will snow tomorrow, but the forecast isn\'t sure.', 1], ['Charlie will ___ win the race; nobody else is even close!', 0], ['___ the treasure is buried under the old tree. Let\'s check!', 1], ['The sun will ___ rise tomorrow morning.', 0]]);
+        return low ? mc(`Which word best fills the gap?\n${s}`, pick(['Perhaps', 'Possibly', 'Maybe']), ['Definitely', 'Certainly', 'Obviously']) : mc(`Which word best fills the gap?\n${s}`, pick(['definitely', 'certainly']), ['perhaps', 'possibly', 'maybe']); }],
+      [3, () => mc('Which modal verb shows something is CERTAIN to happen?', 'will', ['might', 'could', 'may'])],
+      [3, () => mc('Which modal verb shows something is only POSSIBLE?', pick(['might', 'could', 'may']), ['will', 'must', "won't"])],
+      [4, () => mc('Which sentence sounds the MOST certain?', 'The match will definitely start at three.', ['The match might start at three.', 'Perhaps the match could start at three.', 'The match may possibly start at three.'])],
+    ],
+  },
+  {
+    id: 'enp', name: 'Expanded noun phrases', blurb: 'the gnarled old oak tree',
+    lesson: `<p>An <b>expanded noun phrase</b> is a noun with extra detail added before it, after it, or both.</p>
+      <ul><li>the tree → the <span class="hl">gnarled old</span> tree</li><li>the dragon → the <span class="hl">silver</span> dragon <span class="hl">with emerald eyes</span></li></ul>
+      <p>The <b>main noun</b> is the thing the whole phrase is about.</p>
+      <div class="example">a tiny wooden <b>boat</b> bobbing on the waves → main noun: <b>boat</b></div>`,
+    tip: 'An expanded noun phrase = a noun + describing words around it. Ask: what is the whole phrase about?',
+    makers: [
+      [2, () => { const x = pick(ENP); return mc('Which of these is an EXPANDED NOUN PHRASE?', x.p, NOT_ENP); }],
+      [3, () => { const x = pick(ENP); return mc(`In "${x.p}", which word is the MAIN noun the phrase is about?`, x.head, x.others); }],
+    ],
+  },
+  {
+    id: 'tenses', name: 'Tenses', blurb: 'past, present, future, progressive, perfect',
+    lesson: `<ul>
+      <li><b>Simple present</b>: Grandad <span class="hl">paints</span>.</li>
+      <li><b>Simple past</b>: Grandad <span class="hl">painted</span>.</li>
+      <li><b>Future</b>: Grandad <span class="hl">will paint</span>.</li>
+      <li><b>Present progressive</b> (happening now): Grandad <span class="hl">is painting</span>.</li>
+      <li><b>Past progressive</b> (was happening): Grandad <span class="hl">was painting</span>.</li>
+      <li><b>Present perfect</b> (has done): Grandad <span class="hl">has painted</span>.</li>
+      <li><b>Past perfect</b> (had done, before something else): Grandad <span class="hl">had painted</span>.</li></ul>
+      <div class="example">Clue words help: <b>yesterday</b> → past, <b>tomorrow</b> → future, <b>right now</b> → is ...ing</div>`,
+    tip: 'is/was + -ing = progressive. has/had + done = perfect. will = future.',
+    makers: [
+      [1, () => { const v = pick(VERBS); const subj = pick(SUBJECTS); const t = pick(['simple present', 'simple past', 'future']); const label = { 'simple present': 'present', 'simple past': 'past', future: 'future' };
+        return mc(`What tense is this sentence?\n"${subj} ${TENSES[t](v)} ${v.obj}."`, label[t], ['past', 'present', 'future', 'none of these'].filter((l) => l !== label[t])); }],
+      [2, () => { const v = pick(VERBS); const opts = [['Yesterday', 'simple past'], ['Tomorrow', 'future'], ['Every Saturday', 'simple present'], ['Right now', 'present progressive']]; const [when, t] = pick(opts);
+        return mc(`Which verb fits?\n${when}, Charlie ___ ${v.obj}.`, TENSES[t](v), opts.map(([, o]) => TENSES[o](v))); }],
+      [3, () => { const v = pick(VERBS); const subj = pick(SUBJECTS); const t = pick(['present progressive', 'past progressive', 'present perfect', 'past perfect', 'simple past', 'future']);
+        return mc(`What tense is the verb in this sentence?\n"${subj} ${TENSES[t](v)} ${v.obj}."`, t, Object.keys(TENSES)); }],
+      [4, () => { const v = pick(VERBS); return mc(`Which verb fits?\nBy the time the bell rang, Charlie ___ ${v.obj}.`, `had ${v.pp}`, [`has ${v.base}`, `will ${v.base}`, `is ${v.ing}`, v.s]); }],
+      [4, () => { const v = pick(VERBS); return mc(`Which verb fits?\nLook! Charlie ___ ${v.obj} already!`, `has ${v.pp}`, [`have ${v.past}`, `will ${v.past}`, `is ${v.pp}`]); }],
+      [4, () => { const v = pick(VERBS); return mc(`Which verb fits?\nWhile Charlie ___ ${v.obj}, the phone rang.`, `was ${v.ing}`, [`is ${v.base}`, `will ${v.ing}`, `has ${v.ing}`]); }],
+    ],
+  },
+  {
+    id: 'vocab', name: 'Ambitious vocabulary', blurb: 'big → colossal, walked slowly → trudged',
+    lesson: `<p>Swap plain words for precise, powerful ones to create vivid pictures.</p>
+      <ul><li>big → <span class="hl">enormous</span>, <span class="hl">colossal</span></li><li>scared → <span class="hl">terrified</span>, <span class="hl">petrified</span></li><li>walked slowly → <span class="hl">trudged</span>, <span class="hl">plodded</span></li><li>said quietly → <span class="hl">whispered</span>, <span class="hl">murmured</span></li></ul>
+      <p>When you meet a new word, use the rest of the sentence as a clue to its meaning.</p>
+      <div class="example">"After walking all day without food, the knight was <b>famished</b>." → no food, so famished means very hungry.</div>`,
+    tip: 'Pick the word with the same meaning that paints a stronger picture. For a new word, use the rest of the sentence as clues.',
+    makers: [
+      [1, () => { const [plain, syns] = pick(SYNONYMS); return mc(`Which word is a more powerful way to say "${plain}"?`, pick(syns), SYNONYMS.filter(([p]) => p !== plain).map(([, s]) => pick(s))); }],
+      [2, () => { const group = pick([SAID, WALKED]); const [plain, syns] = pick(group); return mc(`Which verb is the best replacement for "${plain}"?`, pick(syns), group.filter(([p]) => p !== plain).map(([, s]) => pick(s))); }],
+      [3, () => { const x = pick(CONTEXT); return mc(`"${x.s}"\nWhat does "${x.w}" mean?`, x.a, x.x); }],
+    ],
+  },
+  {
+    id: 'techniques', name: 'Writers\' techniques', blurb: 'simile, metaphor, personification...',
+    lesson: `<ul>
+      <li><b>Simile</b>: compares using <i>like</i> or <i>as</i>. <span class="hl">as white as a sheet</span></li>
+      <li><b>Metaphor</b>: says something IS something else. <span class="hl">The moon was a silver coin.</span></li>
+      <li><b>Personification</b>: gives a thing human actions. <span class="hl">The wind whispered.</span></li>
+      <li><b>Alliteration</b>: words starting with the same sound. <span class="hl">Freezing fog filled the forest.</span></li>
+      <li><b>Onomatopoeia</b>: words that sound like the noise. <span class="hl">Crash! Buzz!</span></li>
+      <li><b>Hyperbole</b>: huge exaggeration. <span class="hl">I could eat a horse.</span></li></ul>`,
+    tip: 'Simile uses like/as. Metaphor says it IS. Personification = human actions for things.',
+    makers: [
+      [3, () => { const tech = pick(Object.keys(TECHNIQUES)); return mc(`Which technique is used here?\n"${pick(TECHNIQUES[tech])}"`, tech, Object.keys(TECHNIQUES)); }],
+    ],
+  },
+  {
+    id: 'reading', name: 'Reading detective', blurb: 'Feelings, motives and word choices',
+    lesson: `<p><b>Inference</b> means working out what the writer doesn't say directly, using clues.</p>
+      <ul><li>Look at what characters <b>do</b>, <b>say</b> and how they <b>look</b>.</li><li>Pick the evidence that proves your answer best.</li><li>Ask: why did the author choose <i>this</i> word and not a plainer one?</li></ul>
+      <div class="example">"Jake <b>slammed</b> his door." → slammed (not closed) shows he is angry.</div>`,
+    tip: 'Look for clues in actions, words and body language. Strong verbs show feelings.',
+    makers: [
+      [3, () => { const x = pick(INFERENCE); return mc(`${x.p}\n\n${x.q}`, x.a, x.x); }],
+      [4, () => { const x = pick(EFFECTS); return mc(`"${x.s}"\nWhy did the author choose the word "${x.w}"?`, x.a, x.x); }],
+    ],
+  },
+];
+
+const LEVELS = [
+  { id: 'easy', name: 'Warm-up', min: 1, max: 2 },
+  { id: 'normal', name: 'Year 5/6', min: 1, max: 3 },
+  { id: 'hard', name: 'Challenge', min: 2, max: 4 },
+];
+const QUIZ_LEN = 10;
+
+// ---------- saved progress (this browser only) ----------
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('ce-' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('ce-' + k, JSON.stringify(v)); } catch (e) { /* ignore */ } },
+};
+let level = store.get('level', 'normal');
+let stats = store.get('stats', {}); // topic id -> { right, total }
+
+// ---------- quiz state ----------
+let quiz = null;
+
+function makeQuestion(topicIds) {
+  const lv = LEVELS.find((l) => l.id === level) || LEVELS[1];
+  let pool = [];
+  for (const t of TOPICS) if (topicIds.includes(t.id)) for (const [lvl, fn] of t.makers) pool.push({ t, lvl, fn });
+  if (topicIds.length > 1) { const inRange = pool.filter((p) => p.lvl >= lv.min && p.lvl <= lv.max); if (inRange.length) pool = inRange; }
+  const prev = quiz && quiz.items.length ? quiz.items[quiz.items.length - 1] : null;
+  if (prev && pool.length > 1) { const other = pool.filter((p) => p.t.id !== prev.topic.id || topicIds.length === 1); const notSame = other.filter((p) => p.fn !== prev.fn); pool = notSame.length ? notSame : other.length ? other : pool; }
+  const p = pick(pool);
+  return { topic: p.t, fn: p.fn, q: p.fn() };
+}
+
+function startQuiz(topicIds, title) {
+  quiz = { topicIds, title, items: [], index: 0, score: 0 };
+  nextQuestion();
+}
+function nextQuestion() {
+  if (quiz.items.length >= QUIZ_LEN) return showResults();
+  quiz.items.push({ ...makeQuestion(quiz.topicIds), answered: false, correct: false, given: null });
+  renderQuestion();
+}
+const norm = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '');
+function answer(given) {
+  const item = quiz.items[quiz.items.length - 1]; if (item.answered) return;
+  const ok = item.q.kind === 'typed' ? item.q.accept.some((a) => norm(a) === norm(given)) : norm(given) === norm(item.q.answer);
+  item.answered = true; item.correct = ok; item.given = given;
+  if (ok) quiz.score++;
+  const s = (stats[item.topic.id] ||= { right: 0, total: 0 }); s.total++; if (ok) s.right++; store.set('stats', stats);
+  renderQuestion();
+}
+
+// ---------- screens ----------
+const app = document.getElementById('app');
+function bestBadge(id) {
+  const s = stats[id]; if (!s || !s.total) return '<span class="best">Not tried</span>';
+  const pct = Math.round((100 * s.right) / s.total);
+  return `<span class="best ${pct >= 75 ? 'good' : pct < 50 ? 'weak' : ''}">${pct}% right</span>`;
+}
+function weakTopics() {
+  return TOPICS.filter((t) => { const s = stats[t.id]; return s && s.total >= 3 && s.right / s.total < 0.7; }).map((t) => t.id);
+}
+
+function renderHome() {
+  quiz = null;
+  const weak = weakTopics();
+  app.innerHTML = `
+    <header class="top">
+      <h1>Charlie's <span class="hl">English</span></h1>
+      <div class="levels" role="group" aria-label="Level">${LEVELS.map((l) => `<button data-level="${l.id}" aria-pressed="${l.id === level}">${l.name}</button>`).join('')}</div>
+    </header>
+    <section class="hero">
+      <h2>Quick test</h2>
+      <p class="muted">${QUIZ_LEN} mixed questions from this term's grammar, vocabulary and reading. After each one you see the right answer and a tip.</p>
+      <div class="actions">
+        <button class="btn" id="quick">Start quick test</button>
+        ${weak.length ? `<button class="btn ghost" id="weak">Practise my tricky topics (${weak.length})</button>` : ''}
+      </div>
+    </section>
+    <h2>Topics</h2>
+    <div class="topics">${TOPICS.map((t) => `
+      <div class="topic">
+        <div class="row"><h3>${t.name}</h3>${bestBadge(t.id)}</div>
+        <p class="muted">${t.blurb}</p>
+        <div class="row"><button data-learn="${t.id}">Learn</button><button class="go" data-practise="${t.id}">Practise</button></div>
+      </div>`).join('')}</div>`;
+  app.querySelectorAll('[data-level]').forEach((b) => b.addEventListener('click', () => { level = b.dataset.level; store.set('level', level); renderHome(); }));
+  document.getElementById('quick').addEventListener('click', () => startQuiz(TOPICS.map((t) => t.id), 'Quick test'));
+  const w = document.getElementById('weak'); if (w) w.addEventListener('click', () => startQuiz(weak, 'Tricky topics'));
+  app.querySelectorAll('[data-learn]').forEach((b) => b.addEventListener('click', () => renderLesson(TOPICS.find((t) => t.id === b.dataset.learn))));
+  app.querySelectorAll('[data-practise]').forEach((b) => b.addEventListener('click', () => { const t = TOPICS.find((x) => x.id === b.dataset.practise); startQuiz([t.id], t.name); }));
+  window.scrollTo(0, 0);
+}
+
+function renderLesson(t) {
+  quiz = null;
+  app.innerHTML = `
+    <div><button class="btn ghost" id="home">← Home</button></div>
+    <section class="card lesson">
+      <span class="tag">Learn</span>
+      <h2>${t.name}</h2>
+      ${t.lesson}
+    </section>
+    <button class="btn wide" id="go">Practise ${t.name.toLowerCase()}</button>`;
+  document.getElementById('home').addEventListener('click', renderHome);
+  document.getElementById('go').addEventListener('click', () => startQuiz([t.id], t.name));
+  window.scrollTo(0, 0);
+}
+
+function renderQuestion() {
+  const item = quiz.items[quiz.items.length - 1]; const q = item.q; const n = quiz.items.length;
+  const long = q.text.length > 80;
+  let body;
+  if (q.kind === 'choice') {
+    const longChoices = q.choices.some((c) => c.length > 22);
+    body = `<div class="choices ${longChoices ? 'long' : ''}">${q.choices.map((c, i) => {
+      let cls = ''; if (item.answered) { if (norm(c) === norm(q.answer)) cls = 'right'; else if (c === item.given) cls = 'wrong'; }
+      return `<button class="choice ${cls}" data-c="${esc(c)}" ${item.answered ? 'disabled' : ''}><span class="n">${i + 1}</span><span>${esc(c)}</span></button>`;
+    }).join('')}</div>`;
+  } else {
+    body = `<form class="typed" id="tf"><input id="ti" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type your answer" value="${item.answered ? esc(item.given) : ''}" ${item.answered ? 'disabled' : ''}>${item.answered ? '' : '<button class="btn" type="submit">Check</button>'}</form>`;
+  }
+  let fb = '';
+  if (item.answered) {
+    fb = item.correct
+      ? `<div class="feedback good"><strong>Correct!</strong><span>${esc(item.topic.tip)}</span></div>`
+      : `<div class="feedback bad"><strong>Not quite.</strong><span>The answer is <b>${esc(q.kind === 'typed' ? q.accept.join(' or ') : q.answer)}</b>.</span><span>${esc(item.topic.tip)}</span></div>`;
+  }
+  app.innerHTML = `
+    <div class="qmeta"><button class="btn ghost" id="home" style="font-size:15px;padding:8px 14px">✕ Stop</button><span>${esc(quiz.title)}</span><span>Question ${n} of ${QUIZ_LEN} · ${quiz.score} right</span></div>
+    <div class="bar"><div style="width:${((n - (item.answered ? 0 : 1)) / QUIZ_LEN) * 100}%"></div></div>
+    <section class="card">
+      <span class="tag">${esc(item.topic.name)}</span>
+      <p class="qtext ${long ? 'long' : ''}">${esc(q.text)}</p>
+      ${q.hint && !item.answered ? `<p class="hint">Hint: ${esc(q.hint)}</p>` : ''}
+      ${body}
+      ${fb}
+      ${item.answered ? `<button class="btn wide" id="next">${n >= QUIZ_LEN ? 'See my score' : 'Next question'} →</button>` : ''}
+    </section>`;
+  document.getElementById('home').addEventListener('click', renderHome);
+  app.querySelectorAll('.choice').forEach((b) => b.addEventListener('click', () => answer(b.dataset.c)));
+  const tf = document.getElementById('tf');
+  if (tf && !item.answered) { tf.addEventListener('submit', (e) => { e.preventDefault(); const v = document.getElementById('ti').value.trim(); if (v) answer(v); }); document.getElementById('ti').focus(); }
+  const next = document.getElementById('next'); if (next) { next.addEventListener('click', nextQuestion); next.focus({ preventScroll: true }); }
+}
+
+function showResults() {
+  const s = quiz.score; const stars = s >= 9 ? 3 : s >= 7 ? 2 : s >= 4 ? 1 : 0;
+  const msg = s === QUIZ_LEN ? 'Perfect score! Brilliant work.' : s >= 7 ? 'Great work! Check the ones you missed below.' : s >= 4 ? 'Good effort. Have a look at the tips and try again.' : 'Keep going! Read the Learn page, then have another go.';
+  const by = {};
+  for (const it of quiz.items) { const b = (by[it.topic.id] ||= { t: it.topic, right: 0, total: 0 }); b.total++; if (it.correct) b.right++; }
+  const missed = quiz.items.filter((it) => !it.correct);
+  const ids = quiz.topicIds; const title = quiz.title;
+  const missedIds = [...new Set(missed.map((it) => it.topic.id))];
+  app.innerHTML = `
+    <section class="card" style="text-align:center;justify-items:center">
+      <span class="tag">${esc(title)}</span>
+      <div class="score">${s}/${QUIZ_LEN}</div>
+      <div class="stars" aria-label="${stars} stars">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+      <p>${msg}</p>
+    </section>
+    <section class="card">
+      <h3>How you did</h3>
+      <div class="results">${Object.values(by).map((b) => `<div class="r"><span>${esc(b.t.name)}</span><span>${b.right} of ${b.total}</span></div>`).join('')}</div>
+    </section>
+    ${missed.length ? `<section class="card"><h3>Questions to look at again</h3><div class="review">${missed.map((it) => `<div class="item"><b>${esc(it.q.text)}</b>You said: ${esc(it.given)} · Answer: <b style="display:inline">${esc(it.q.kind === 'typed' ? it.q.accept.join(' or ') : it.q.answer)}</b></div>`).join('')}</div></section>` : ''}
+    <div class="actions">
+      ${missedIds.length ? '<button class="btn" id="redo">Practise what I missed</button>' : ''}
+      <button class="btn ${missedIds.length ? 'ghost' : ''}" id="again">Another test</button>
+      <button class="btn ghost" id="home">Home</button>
+    </div>`;
+  document.getElementById('home').addEventListener('click', renderHome);
+  document.getElementById('again').addEventListener('click', () => startQuiz(ids, title));
+  const redo = document.getElementById('redo'); if (redo) redo.addEventListener('click', () => startQuiz(missedIds, 'What I missed'));
+  window.scrollTo(0, 0);
+}
+
+// keys 1-4 pick an answer, Enter goes on
+document.addEventListener('keydown', (e) => {
+  if (!quiz || !quiz.items.length || e.target.tagName === 'INPUT') return;
+  const item = quiz.items[quiz.items.length - 1];
+  if (!item.answered && item.q.kind === 'choice' && /^[1-4]$/.test(e.key)) answer(item.q.choices[+e.key - 1]);
+});
+
+renderHome();
+</script>
+</body>
+</html>
