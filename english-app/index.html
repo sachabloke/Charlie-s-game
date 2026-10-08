@@ -47,6 +47,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--mark); outl
 .btn { font-family: var(--display); font-weight: 600; font-size: 19px; padding: 14px 22px; border-radius: 14px; background: var(--accent); color: var(--accent-ink); box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 60%, #000); transition: transform .08s; }
 .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 60%, #000); }
 .btn.ghost { background: var(--chip); color: var(--ink); box-shadow: none; }
+a.btn { text-decoration: none; text-align: center; display: inline-block; }
+.send .actions .btn { flex: 1 1 120px; }
 .btn.wide { width: 100%; }
 
 header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -409,7 +411,7 @@ const LEVELS = [
   { id: 'normal', name: 'Year 5/6', min: 1, max: 3 },
   { id: 'hard', name: 'Challenge', min: 2, max: 4 },
 ];
-const QUIZ_LEN = 10;
+const QUIZ_LEN = 20;
 
 // ---------- saved progress (this browser only) ----------
 const store = {
@@ -547,8 +549,8 @@ function renderQuestion() {
 }
 
 function showResults() {
-  const s = quiz.score; const stars = s >= 9 ? 3 : s >= 7 ? 2 : s >= 4 ? 1 : 0;
-  const msg = s === QUIZ_LEN ? 'Perfect score! Brilliant work.' : s >= 7 ? 'Great work! Check the ones you missed below.' : s >= 4 ? 'Good effort. Have a look at the tips and try again.' : 'Keep going! Read the Learn page, then have another go.';
+  const s = quiz.score; const pc = s / QUIZ_LEN; const stars = pc >= 0.9 ? 3 : pc >= 0.7 ? 2 : pc >= 0.4 ? 1 : 0;
+  const msg = s === QUIZ_LEN ? 'Perfect score! Brilliant work.' : pc >= 0.7 ? 'Great work! Check the ones you missed below.' : pc >= 0.4 ? 'Good effort. Have a look at the tips and try again.' : 'Keep going! Read the Learn page, then have another go.';
   const by = {};
   for (const it of quiz.items) { const b = (by[it.topic.id] ||= { t: it.topic, right: 0, total: 0 }); b.total++; if (it.correct) b.right++; }
   const missed = quiz.items.filter((it) => !it.correct);
@@ -560,6 +562,16 @@ function showResults() {
       <div class="score">${s}/${QUIZ_LEN}</div>
       <div class="stars" aria-label="${stars} stars">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
       <p>${msg}</p>
+    </section>
+    <section class="card send">
+      <h3>Send my score to Dad</h3>
+      <div class="actions">
+        <button class="btn" id="share">Send score</button>
+        <a class="btn ghost" id="wa" target="_blank" rel="noopener">WhatsApp</a>
+        <a class="btn ghost" id="mail">Email</a>
+        <button class="btn ghost" id="copy">Copy</button>
+      </div>
+      <p class="muted" id="sent" hidden></p>
     </section>
     <section class="card">
       <h3>How you did</h3>
@@ -573,6 +585,19 @@ function showResults() {
     </div>`;
   document.getElementById('home').addEventListener('click', renderHome);
   document.getElementById('again').addEventListener('click', () => startQuiz(ids, title));
+  const lvName = (LEVELS.find((l) => l.id === level) || LEVELS[1]).name;
+  const when = new Date().toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const report = `Charlie's English: ${title} (${lvName})\nScore: ${s}/${QUIZ_LEN} ${'★'.repeat(stars)}\n${when}\n\n` +
+    Object.values(by).map((b) => `${b.right === b.total ? '✅' : '❌'} ${b.t.name}: ${b.right}/${b.total}`).join('\n');
+  const sent = document.getElementById('sent');
+  const done = (m) => { sent.textContent = m; sent.hidden = false; };
+  document.getElementById('wa').href = 'https://wa.me/?text=' + encodeURIComponent(report);
+  document.getElementById('mail').href = 'mailto:?subject=' + encodeURIComponent(`Charlie's English score: ${s}/${QUIZ_LEN}`) + '&body=' + encodeURIComponent(report);
+  const copy = () => navigator.clipboard.writeText(report).then(() => done('Copied! Paste it into a message to Dad.'), () => done(report));
+  document.getElementById('copy').addEventListener('click', copy);
+  const shareBtn = document.getElementById('share');
+  if (navigator.share) shareBtn.addEventListener('click', () => navigator.share({ title: "Charlie's English score", text: report }).catch(() => {}));
+  else shareBtn.hidden = true;
   const redo = document.getElementById('redo'); if (redo) redo.addEventListener('click', () => startQuiz(missedIds, 'What I missed'));
   window.scrollTo(0, 0);
 }
