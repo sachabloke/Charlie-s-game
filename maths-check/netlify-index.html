@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Charlie's Maths Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a single exam-paper column on squared maths paper; teal for the paper, coral for marks. */
+:root {
+  --bg: #eef4f2;
+  --grid: #dbe7e3;
+  --paper: #ffffff;
+  --ink: #15322c;
+  --muted: #587069;
+  --line: #d0e0db;
+  --accent: #127a68;
+  --accent-ink: #ffffff;
+  --mark: #ff8a5c;
+  --good: #1f9d57;
+  --good-bg: #e3f6eb;
+  --bad: #cf3f3f;
+  --bad-bg: #fdeaea;
+  --chip: #e3eeeb;
+  --display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Nunito", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1a18; --grid: #16262a; --paper: #152523; --ink: #e6f2ef; --muted: #9ab5ae; --line: #284039;
+    --accent: #3cc4a8; --accent-ink: #06201b; --mark: #ff9d76; --good: #4fd18b; --good-bg: #163527;
+    --bad: #ff7b7b; --bad-bg: #3a1c1f; --chip: #1f3531; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1a18; --grid: #16262a; --paper: #152523; --ink: #e6f2ef; --muted: #9ab5ae; --line: #284039;
+  --accent: #3cc4a8; --accent-ink: #06201b; --mark: #ff9d76; --good: #4fd18b; --good-bg: #163527;
+  --bad: #ff7b7b; --bad-bg: #3a1c1f; --chip: #1f3531; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 24px 24px; color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.5; }
+.wrap { max-width: 720px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 60px; display: grid; gap: 18px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; margin: 0; text-wrap: balance; line-height: 1.15; }
+h1 { font-size: 34px; }
+h2 { font-size: 24px; }
+h3 { font-size: 19px; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--mark); outline-offset: 2px; }
+.btn { font-family: var(--display); font-weight: 600; font-size: 19px; padding: 14px 22px; border-radius: 14px; background: var(--accent); color: var(--accent-ink); box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 55%, #000); text-decoration: none; text-align: center; display: inline-block; }
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 55%, #000); }
+.btn.ghost { background: var(--chip); color: var(--ink); box-shadow: none; }
+.btn.wide { width: 100%; }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 20px; display: grid; gap: 14px; min-width: 0; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.actions .btn { flex: 1 1 140px; }
+.rules { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.tag { font-size: 13px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--accent); }
+
+/* test paper */
+.sticky { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; box-shadow: 0 6px 16px -10px rgba(0,0,0,.3); }
+.clock { font-family: var(--mono); font-weight: 700; font-size: 20px; font-variant-numeric: tabular-nums; }
+.done-count { font-weight: 800; color: var(--muted); font-variant-numeric: tabular-nums; }
+.section { display: grid; gap: 12px; }
+.section > h3 { padding: 0 4px; }
+.q { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: start; min-width: 0; }
+.q .num { font-family: var(--mono); font-weight: 700; color: var(--accent); font-size: 16px; padding-top: 2px; }
+.q .text { font-weight: 700; font-size: 18px; min-width: 0; overflow-wrap: anywhere; }
+.q input { grid-column: 2; font-family: var(--mono); font-size: 19px; font-weight: 700; padding: 10px 12px; border-radius: 10px; border: 2px solid var(--line); background: var(--paper); color: var(--ink); width: 100%; max-width: 260px; }
+.q.right { border-color: var(--good); background: var(--good-bg); }
+.q.wrong { border-color: var(--bad); background: var(--bad-bg); }
+.q .verdict { grid-column: 2; font-size: 15px; font-weight: 700; }
+.q.right .verdict { color: var(--good); }
+.q.wrong .verdict { color: var(--bad); }
+.confirm { border: 2px solid var(--mark); }
+
+/* results */
+.score { font-family: var(--display); font-size: 60px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.pct { font-family: var(--display); font-size: 26px; font-weight: 600; color: var(--muted); }
+.strands { display: grid; gap: 10px; }
+.strand { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; }
+.strand .name { font-weight: 800; }
+.strand .val { font-variant-numeric: tabular-nums; font-weight: 800; }
+.meter { grid-column: 1 / -1; height: 10px; border-radius: 99px; background: var(--chip); overflow: hidden; }
+.meter > div { height: 100%; border-radius: 99px; background: var(--good); }
+.meter > div.mid { background: var(--mark); }
+.meter > div.low { background: var(--bad); }
+.pill { display: inline-block; font-size: 13px; font-weight: 800; padding: 3px 10px; border-radius: 99px; background: var(--chip); color: var(--muted); }
+.pill.good { background: var(--good-bg); color: var(--good); }
+.pill.bad { background: var(--bad-bg); color: var(--bad); }
+.weak { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.goal { display: flex; gap: 8px; flex-wrap: wrap; }
+.goal span { flex: 1 1 0; min-width: 70px; text-align: center; padding: 10px 6px; border-radius: 12px; background: var(--chip); font-weight: 800; font-size: 15px; }
+.goal span.hit { background: var(--good-bg); color: var(--good); }
+.goal span.miss { background: var(--bad-bg); color: var(--bad); }
+@media (max-width: 480px) { h1 { font-size: 28px; } .q .text { font-size: 17px; } .score { font-size: 48px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app"></div>
+
+<script>
+'use strict';
+// Maths question generator + answer checker.
+// Tiers: 1 = easy (common chests) ... 4 = hardest (legendary chests).
+// Everything here is server-side so answers cannot be found in the browser.
+
+const rand = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const gcd = (a, b) => (b === 0 ? Math.abs(a) : gcd(b, a % b));
+const simp = (n, d) => { const g = gcd(n, d) || 1; return [n / g, d / g]; };
+const fracStr = (n, d) => { const [a, b] = simp(n, d); return b === 1 ? `${a}` : `${a}/${b}`; };
+const round = (x, dp = 3) => Math.round(x * 10 ** dp) / 10 ** dp;
+
+function toRoman(n) {
+  const map = [[100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];
+  let s = '';
+  for (const [v, r] of map) while (n >= v) { s += r; n -= v; }
+  return s;
+}
+const ordinal = (k) => k + (k % 10 === 1 && k !== 11 ? 'st' : k % 10 === 2 && k !== 12 ? 'nd' : k % 10 === 3 && k !== 13 ? 'rd' : 'th');
+const isPrime = (n) => { if (n < 2) return false; for (let i = 2; i * i <= n; i++) if (n % i === 0) return false; return true; };
+
+// Answer kinds:
+//  number            -> any numerically equal answer (3/4, 0.75, 75% all accepted when equal)
+//  fraction-simplest -> must be a fraction in lowest terms
+//  mixed             -> must be a mixed number like "1 3/4"
+//  remainder         -> must be like "12 r 3"
+//  exact             -> text match ignoring spaces/case (roman numerals, yes/no, "2/3")
+const TOPICS = { 1: [], 2: [], 3: [], 4: [] };
+const def = (tier, topic, fn) => TOPICS[tier].push({ topic, fn });
+const num = (text, answer, extra = {}) => ({ text, kind: 'number', answer, display: String(answer), ...extra });
+
+// ---------------- TIER 1: warm-ups ----------------
+def(1, 'Times tables', () => { const a = rand(2, 12), b = rand(2, 12); return num(`${a} × ${b} = ?`, a * b); });
+def(1, 'Division facts', () => { const a = rand(2, 12), b = rand(2, 12); return num(`${a * b} ÷ ${a} = ?`, b); });
+def(1, 'Adding', () => { const a = rand(25, 999), b = rand(25, 999); return num(`${a} + ${b} = ?`, a + b); });
+def(1, 'Taking away', () => { const a = rand(100, 999), b = rand(10, a - 10); return num(`${a} − ${b} = ?`, a - b); });
+def(1, 'Rounding', () => {
+  const to = pick([10, 100, 1000]); const n = rand(to === 1000 ? 1001 : 101, 9999);
+  return num(`Round ${n} to the nearest ${to}.`, Math.round(n / to) * to);
+});
+def(1, 'Doubling and halving', () => {
+  if (Math.random() < 0.5) { const n = rand(13, 99); return num(`What is double ${n}?`, n * 2); }
+  const n = rand(10, 100) * 2; return num(`What is half of ${n}?`, n / 2);
+});
+def(1, 'Number bonds', () => {
+  const total = pick([100, 100, 1000]); const a = total === 100 ? rand(1, 99) : rand(50, 950);
+  return num(`${a} + ? = ${total}`, total - a);
+});
+def(1, 'Place value', () => {
+  const digits = rand(4, 5); let n; let pos; let digit;
+  do { n = rand(10 ** (digits - 1), 10 ** digits - 1); pos = rand(0, digits - 1); digit = Math.floor(n / 10 ** pos) % 10; } while (digit === 0 || String(n).split('').filter((c) => c === String(digit)).length > 1);
+  return num(`What is the value of the digit ${digit} in ${n.toLocaleString('en-GB')}?`, digit * 10 ** pos, { hint: 'Think about which column the digit is in.' });
+});
+def(1, 'Counting in steps', () => {
+  const step = pick([2, 5, 10, 25, 50, 100]); const start = step * rand(1, 8);
+  const terms = [0, 1, 2, 3].map((i) => start + step * i);
+  return num(`What comes next? ${terms.join(', ')}, ?`, start + step * 4);
+});
+
+// ---------------- TIER 2: Year 5 core ----------------
+def(2, 'Equivalent fractions', () => {
+  const d = rand(2, 6), n = rand(1, d - 1), k = rand(2, 6);
+  return num(`${n}/${d} = ?/${d * k}   (what is the missing top number?)`, n * k);
+});
+def(2, 'Fraction of an amount', () => {
+  const d = pick([2, 3, 4, 5, 6, 8, 10]); const n = rand(1, d - 1); const amount = d * rand(2, 12);
+  return num(`What is ${n}/${d} of ${amount}?`, (n * amount) / d, { hint: `Divide by ${d}, then multiply by ${n}.` });
+});
+def(2, 'Simplifying fractions', () => {
+  let n, d; do { d = rand(2, 9); n = rand(1, d - 1); } while (gcd(n, d) !== 1);
+  const k = rand(2, 5);
+  return { text: `Write ${n * k}/${d * k} in its simplest form.`, kind: 'fraction-simplest', answer: `${n}/${d}`, display: `${n}/${d}`, hint: 'Divide the top and bottom by the same number.' };
+});
+def(2, 'Adding fractions', () => {
+  const d = rand(3, 12); const a = rand(1, d - 2); const b = rand(1, d - 1 - a);
+  return num(`${a}/${d} + ${b}/${d} = ?   (answer as a fraction, e.g. 3/4)`, round((a + b) / d, 6), { display: fracStr(a + b, d) });
+});
+def(2, 'Subtracting fractions', () => {
+  const d = rand(3, 12); const a = rand(2, d - 1); const b = rand(1, a - 1);
+  return num(`${a}/${d} − ${b}/${d} = ?   (answer as a fraction, e.g. 3/4)`, round((a - b) / d, 6), { display: fracStr(a - b, d) });
+});
+const FD = [[1, 2, 0.5], [1, 4, 0.25], [3, 4, 0.75], [1, 5, 0.2], [2, 5, 0.4], [3, 5, 0.6], [4, 5, 0.8], [1, 10, 0.1], [3, 10, 0.3], [7, 10, 0.7], [9, 10, 0.9], [1, 8, 0.125], [1, 100, 0.01], [1, 20, 0.05]];
+def(2, 'Fractions and decimals', () => {
+  const [n, d, dec] = pick(FD);
+  if (Math.random() < 0.5) return { text: `Write ${n}/${d} as a decimal.`, kind: 'decimal', answer: dec, display: String(dec) };
+  return { text: `Write ${dec} as a fraction.`, kind: 'fraction', answer: dec, display: `${n}/${d}` };
+});
+def(2, 'Fractions and percentages', () => {
+  const [n, d, dec] = pick(FD);
+  if (Math.random() < 0.5) return { text: `Write ${n}/${d} as a percentage.`, kind: 'percent', answer: round(dec * 100), display: `${round(dec * 100)}%` };
+  return { text: `Write ${round(dec * 100)}% as a fraction.`, kind: 'fraction', answer: dec, display: `${n}/${d}` };
+});
+def(2, 'Negative numbers', () => {
+  const r = Math.random();
+  if (r < 0.4) { const t = -rand(1, 9), drop = rand(2, 9); return num(`The temperature is ${t}°C. It drops by ${drop}°C. What is the new temperature?`, t - drop, { display: `${t - drop}°C` }); }
+  if (r < 0.7) { const t = -rand(2, 12), rise = rand(3, 20); return num(`The temperature is ${t}°C. It rises by ${rise}°C. What is it now?`, t + rise, { display: `${t + rise}°C` }); }
+  const a = rand(1, 9), b = rand(a + 1, 19); return num(`${a} − ${b} = ?`, a - b);
+});
+def(2, 'Roman numerals', () => {
+  const n = rand(4, 99);
+  if (Math.random() < 0.5) return num(`What number is ${toRoman(n)} in Roman numerals?`, n);
+  return { text: `Write ${n} in Roman numerals.`, kind: 'exact', answer: toRoman(n), display: toRoman(n) };
+});
+def(2, 'Measures', () => {
+  const r = rand(1, 5);
+  if (r === 1) { const cm = rand(2, 9) * 100 + pick([0, 50, 25, 75]); return num(`How many metres is ${cm} cm?`, cm / 100, { display: `${cm / 100} m` }); }
+  if (r === 2) { const kg = rand(1, 9) + pick([0, 0.5, 0.25]); return num(`How many grams are in ${kg} kg?`, kg * 1000, { display: `${kg * 1000} g` }); }
+  if (r === 3) { const h = rand(2, 6); return num(`How many minutes are in ${h} hours?`, h * 60); }
+  if (r === 4) { const m = rand(1, 9) + pick([0.2, 0.5, 0.75]); return num(`How many centimetres is ${m} m?`, round(m * 100), { display: `${round(m * 100)} cm` }); }
+  const l = rand(1, 5) + pick([0.5, 0.25, 0]); return num(`How many millilitres are in ${l} litres?`, l * 1000, { display: `${l * 1000} ml` });
+});
+def(2, 'Multiplying and dividing by 10, 100, 1000', () => {
+  const by = pick([10, 100, 1000]);
+  if (Math.random() < 0.5) { const n = rand(2, 99) + pick([0, 0, 0.5, 0.2, 0.7]); return num(`${n} × ${by} = ?`, round(n * by)); }
+  const n = rand(2, 99) * pick([1, 10, 100]); return num(`${n} ÷ ${by} = ?`, round(n / by, 4));
+});
+def(2, 'Perimeter', () => {
+  const w = rand(3, 20), h = rand(2, 15);
+  return num(`A rectangle is ${w} cm long and ${h} cm wide. What is its perimeter in cm?`, 2 * (w + h), { hint: 'Add all four sides.' });
+});
+def(2, 'Big adding and subtracting', () => {
+  const a = rand(1000, 9999), b = rand(1000, 9999);
+  if (Math.random() < 0.5) return num(`${a} + ${b} = ?`, a + b);
+  const [big, small] = a > b ? [a, b] : [b, a]; return num(`${big} − ${small} = ?`, big - small);
+});
+def(2, 'Decimals', () => {
+  const a = rand(10, 99) / 10, b = rand(10, 99) / 10;
+  if (Math.random() < 0.5) return num(`${a} + ${b} = ?`, round(a + b));
+  const [big, small] = a > b ? [a, b] : [b, a]; return num(`${big} − ${small} = ?`, round(big - small));
+});
+
+// ---------------- TIER 3: Year 5/6 ----------------
+def(3, 'Percentages of amounts', () => {
+  const [p, mult] = pick([[10, 10], [20, 5], [25, 4], [50, 2], [75, 4], [5, 20]]);
+  const amount = mult * rand(2, 15);
+  return num(`What is ${p}% of ${amount}?`, (p * amount) / 100, { hint: '10% means divide by 10.' });
+});
+def(3, 'Area', () => {
+  if (Math.random() < 0.6) { const w = rand(3, 15), h = rand(2, 12); return num(`A rectangle is ${w} cm long and ${h} cm wide. What is its area in cm²?`, w * h); }
+  const b = rand(2, 12) * 2, h = rand(2, 12); return num(`A triangle has a base of ${b} cm and a height of ${h} cm. What is its area in cm²?`, (b * h) / 2, { hint: 'Area of a triangle = base × height ÷ 2.' });
+});
+def(3, 'Angles', () => {
+  const r = rand(1, 4);
+  if (r === 1) { const a = rand(20, 160); return num(`Two angles make a straight line. One is ${a}°. What is the other?`, 180 - a); }
+  if (r === 2) { const a = rand(20, 100), b = rand(20, 150 - a); return num(`A triangle has angles of ${a}° and ${b}°. What is the third angle?`, 180 - a - b, { hint: 'Angles in a triangle add up to 180°.' }); }
+  if (r === 3) { const a = rand(40, 200), b = rand(40, 300 - a); return num(`Three angles meet at a point. Two of them are ${a}° and ${b}°. What is the third?`, 360 - a - b, { hint: 'Angles around a point add up to 360°.' }); }
+  const a = rand(10, 80); return num(`A right angle is split into two. One part is ${a}°. What is the other part?`, 90 - a);
+});
+def(3, 'Division with remainders', () => {
+  const a = rand(3, 9), q = rand(10, 99), r = rand(1, a - 1);
+  return { text: `${a * q + r} ÷ ${a} = ?   (write it like 12 r 3)`, kind: 'remainder', answer: { q, r }, display: `${q} r ${r}` };
+});
+def(3, 'Mixed numbers', () => {
+  const d = rand(2, 6); const whole = rand(1, 4); let part; do { part = rand(1, d - 1); } while (gcd(part, d) !== 1);
+  const n = whole * d + part;
+  if (Math.random() < 0.5) return { text: `Write ${n}/${d} as a mixed number (like 1 3/4).`, kind: 'mixed', answer: { whole, n: part, d }, display: `${whole} ${part}/${d}` };
+  return { text: `Write ${whole} ${part}/${d} as an improper fraction (top-heavy).`, kind: 'fraction-simplest', answer: `${n}/${d}`, display: `${n}/${d}` };
+});
+def(3, 'Adding fractions (different bottoms)', () => {
+  const d1 = pick([2, 3, 4, 5, 6]); const k = d1 <= 4 ? rand(2, 3) : 2; const d2 = d1 * k;
+  const a = rand(1, d1 - 1), b = rand(1, d2 - 1);
+  const n = a * k + b;
+  return num(`${a}/${d1} + ${b}/${d2} = ?   (answer as a fraction)`, round(n / d2, 6), { display: fracStr(n, d2), hint: `Change ${a}/${d1} into ${k * a}/${d2} first.` });
+});
+def(3, 'Multiplying bigger numbers', () => {
+  if (Math.random() < 0.5) { const a = rand(12, 99), b = rand(3, 9); return num(`${a} × ${b} = ?`, a * b); }
+  const a = rand(100, 999), b = rand(3, 9); return num(`${a} × ${b} = ?`, a * b);
+});
+def(3, 'Comparing fractions', () => {
+  let a, b, c, d; do { b = rand(2, 9); a = rand(1, b - 1); d = rand(2, 9); c = rand(1, d - 1); } while (a * d === c * b || b === d);
+  const bigger = a / b > c / d ? `${a}/${b}` : `${c}/${d}`;
+  return { text: `Which fraction is bigger: ${a}/${b} or ${c}/${d}?`, kind: 'exact', answer: bigger, display: bigger, hint: 'Try giving them the same bottom number.' };
+});
+def(3, 'Square numbers', () => {
+  const n = rand(2, 12);
+  if (Math.random() < 0.5) return num(`What is ${n} squared (${n}²)?`, n * n);
+  return num(`Which number multiplied by itself makes ${n * n}?`, n);
+});
+def(3, 'Primes, factors and multiples', () => {
+  const r = rand(1, 4);
+  if (r === 1) { const n = rand(2, 50); return { text: `Is ${n} a prime number? (yes or no)`, kind: 'exact', answer: isPrime(n) ? 'yes' : 'no', display: isPrime(n) ? 'yes' : 'no' }; }
+  if (r === 2) { const n = rand(3, 12), k = rand(3, 9); return num(`What is the ${ordinal(k)} multiple of ${n}?`, n * k); }
+  if (r === 3) { const g = pick([2, 3, 4, 5, 6]); const a = g * rand(2, 5); let b; do { b = g * rand(2, 6); } while (b === a); return num(`What is the highest common factor of ${a} and ${b}?`, gcd(a, b)); }
+  const a = pick([2, 3, 4, 5, 6]); let b; do { b = pick([3, 4, 5, 6, 8]); } while (b === a); return num(`What is the lowest common multiple of ${a} and ${b}?`, (a * b) / gcd(a, b));
+});
+def(3, 'Number sequences', () => {
+  const step = pick([3, 4, 6, 7, 8, 9, 11, 12, -3, -5, -7]); const start = step > 0 ? rand(1, 30) : rand(20, 50);
+  const terms = [0, 1, 2, 3].map((i) => start + step * i);
+  return num(`What comes next? ${terms.join(', ')}, ?`, start + step * 4);
+});
+def(3, 'Time', () => {
+  const h1 = rand(1, 10), m1 = pick([0, 15, 30, 45]); const mins = rand(2, 9) * 15;
+  const total = h1 * 60 + m1 + mins; const h2 = Math.floor(total / 60), m2 = total % 60;
+  return num(`A film starts at ${h1}:${String(m1).padStart(2, '0')} and finishes at ${h2}:${String(m2).padStart(2, '0')}. How many minutes long is it?`, mins);
+});
+def(3, 'Rounding decimals', () => {
+  const n = rand(100, 999) / 100;
+  if (Math.random() < 0.5) return num(`Round ${n} to the nearest whole number.`, Math.round(n));
+  return num(`Round ${n} to one decimal place.`, Math.round(n * 10) / 10);
+});
+
+// ---------------- TIER 4: Year 6 challenge ----------------
+def(4, 'Long multiplication', () => { const a = rand(12, 99), b = rand(12, 99); return num(`${a} × ${b} = ?`, a * b); });
+def(4, 'Long division', () => {
+  const b = rand(11, 25), q = rand(12, 60);
+  if (Math.random() < 0.6) return num(`${b * q} ÷ ${b} = ?`, q);
+  const r = rand(1, b - 1); return { text: `${b * q + r} ÷ ${b} = ?   (write it like 12 r 3)`, kind: 'remainder', answer: { q, r }, display: `${q} r ${r}` };
+});
+def(4, 'Order of operations (BIDMAS)', () => {
+  const a = rand(2, 9), b = rand(2, 9), c = rand(2, 9);
+  const t = rand(1, 6);
+  if (t === 1) return num(`${a} + ${b} × ${c} = ?`, a + b * c, { hint: 'Multiply before you add.' });
+  if (t === 2) return num(`(${a} + ${b}) × ${c} = ?`, (a + b) * c, { hint: 'Brackets first.' });
+  if (t === 3) { const cc = Math.min(c, a * b - 1); return num(`${a} × ${b} − ${cc} = ?`, a * b - cc); }
+  if (t === 4) return num(`${a * b} ÷ ${a} + ${c} = ?`, b + c, { hint: 'Divide before you add.' });
+  if (t === 5) return num(`${a}² + ${b} = ?`, a * a + b);
+  const big = b * c + rand(2, 20); return num(`${big} − ${b} × ${c} = ?`, big - b * c, { hint: 'Multiply before you subtract.' });
+});
+def(4, 'Multiplying fractions', () => {
+  const r = rand(1, 3);
+  if (r === 1) { const d = rand(2, 6), n = rand(1, d - 1), w = d * rand(2, 6); return num(`${n}/${d} × ${w} = ?`, (n * w) / d); }
+  if (r === 2) { const d1 = rand(2, 5), n1 = rand(1, d1 - 1), d2 = rand(2, 5), n2 = rand(1, d2 - 1); return num(`${n1}/${d1} × ${n2}/${d2} = ?   (answer as a fraction)`, round((n1 * n2) / (d1 * d2), 6), { display: fracStr(n1 * n2, d1 * d2), hint: 'Multiply the tops, multiply the bottoms.' }); }
+  const d = rand(2, 5), w = rand(2, 5); return num(`1/${d} ÷ ${w} = ?   (answer as a fraction)`, round(1 / (d * w), 6), { display: `1/${d * w}` });
+});
+def(4, 'Trickier percentages', () => {
+  const p = pick([15, 30, 35, 40, 45, 60, 70, 80, 90]); const amount = 20 * rand(2, 20);
+  return num(`What is ${p}% of ${amount}?`, (p * amount) / 100, { hint: 'Find 10% first, then build it up.' });
+});
+def(4, 'Ratio', () => {
+  let a, b; do { a = rand(1, 5); b = rand(1, 6); } while (a === b);
+  const k = rand(2, 8); const total = (a + b) * k;
+  return num(`Sweets are shared in the ratio ${a}:${b}. There are ${total} sweets altogether. How many does the first person get?`, a * k, { hint: `There are ${a + b} parts in total.` });
+});
+def(4, 'Algebra', () => {
+  const m = rand(2, 6), n = rand(2, 12), c = rand(1, 15);
+  if (Math.random() < 0.5) return num(`${m}n + ${c} = ${m * n + c}.   What is n?`, n);
+  return num(`${m}y − ${c} = ${m * n - c}.   What is y?`, n);
+});
+def(4, 'Mean (average)', () => {
+  const mean = rand(4, 20); const count = rand(3, 5);
+  let nums, last;
+  do { nums = []; let sum = 0; for (let i = 0; i < count - 1; i++) { const v = rand(Math.max(1, mean - 5), mean + 5); nums.push(v); sum += v; } last = mean * count - sum; } while (last < 1 || last > mean + 8);
+  nums.push(last);
+  return num(`What is the mean of ${nums.join(', ')}?`, mean, { hint: 'Add them up, then divide by how many there are.' });
+});
+def(4, 'Decimal multiplying and dividing', () => {
+  if (Math.random() < 0.5) { const a = rand(2, 19) / 10, b = rand(2, 9); return num(`${a} × ${b} = ?`, round(a * b)); }
+  const b = rand(2, 9), q = rand(2, 19) / 10; return num(`${round(q * b)} ÷ ${b} = ?`, q);
+});
+def(4, 'Angles in shapes', () => {
+  if (Math.random() < 0.5) { const a = rand(50, 120), b = rand(50, 120), c = rand(40, 300 - a - b); return num(`A four-sided shape has angles of ${a}°, ${b}° and ${c}°. What is the fourth angle?`, 360 - a - b - c, { hint: 'Angles in a quadrilateral add up to 360°.' }); }
+  const top = rand(10, 80) * 2; return num(`An isosceles triangle has a top angle of ${top}°. What size is each of the other two (equal) angles?`, (180 - top) / 2);
+});
+def(4, 'Shape puzzles', () => {
+  if (Math.random() < 0.5) { const s = rand(3, 12); return num(`A square has a perimeter of ${s * 4} cm. What is its area in cm²?`, s * s); }
+  const b = rand(3, 12), h = rand(2, 10); return num(`A parallelogram has a base of ${b} cm and a height of ${h} cm. What is its area in cm²?`, b * h);
+});
+def(4, 'Money problems', (name) => {
+  const price = rand(1, 5) + pick([0.5, 0.25, 0.75, 0.99]); const qty = rand(2, 4); const pay = pick([10, 20, 20, 50]);
+  const cost = round(price * qty, 2); if (cost > pay) return num(`${name} buys ${qty} comics at £${price.toFixed(2)} each. How much do they cost altogether?`, cost, { display: `£${cost.toFixed(2)}` });
+  return num(`${name} has £${pay} and buys ${qty} comics at £${price.toFixed(2)} each. How much change is there?`, round(pay - cost, 2), { display: `£${(pay - cost).toFixed(2)}` });
+});
+
+// ---------------- public API ----------------
+// preferTopics: topics the player struggles with; one is chosen (when it exists at this tier) about 40% of the time.
+function generate(tier, name = 'Charlie', avoidTopic = null, preferTopics = []) {
+  tier = Math.min(4, Math.max(1, tier));
+  let list = TOPICS[tier];
+  if (avoidTopic && list.length > 1) list = list.filter((t) => t.topic !== avoidTopic);
+  const weak = list.filter((t) => preferTopics.includes(t.topic));
+  const t = weak.length && Math.random() < 0.4 ? pick(weak) : pick(list);
+  const q = t.fn(name);
+  return { topic: t.topic, tier, text: q.text, kind: q.kind, answer: q.answer, display: q.display, hint: q.hint || null };
+}
+
+function parseNumeric(input) {
+  let s = String(input).trim().toLowerCase().replace(/−/g, '-').replace(/,/g, '');
+  s = s.replace(/£|\$|%|°c|°|degrees|cm²|cm2|cm|mm|km|kg|ml|mins?|minutes|hours?|litres?|grams?|metres?|\bm\b|\bg\b|\bl\b|\bp\b/g, '').trim();
+  let m = s.match(/^(-?)(\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+  if (m) { const sign = m[1] ? -1 : 1; const d = +m[4]; if (!d) return null; return sign * (+m[2] + +m[3] / d); }
+  m = s.match(/^(-?\d+)\s*\/\s*(-?\d+)$/);
+  if (m) { const d = +m[2]; if (!d) return null; return +m[1] / d; }
+  if (/^-?\d*\.?\d+$/.test(s)) return parseFloat(s);
+  return null;
+}
+const norm = (s) => { s = String(s).toLowerCase().replace(/[\s!.]+/g, ''); if (s === 'y') return 'yes'; if (s === 'n') return 'no'; return s; };
+const close = (v, ans) => Math.abs(v - ans) <= Math.min(0.0011, Math.max(1e-9, Math.abs(ans) * 0.002));
+
+function check(q, input) {
+  if (input == null) return false;
+  const s = String(input).trim();
+  if (!s) return false;
+  switch (q.kind) {
+    case 'number': {
+      const v = parseNumeric(s); if (v === null) return false;
+      if (close(v, q.answer)) return true;
+      return s.includes('%') && close(v / 100, q.answer); // "75%" for 0.75
+    }
+    case 'decimal': { // must be written as a decimal like 0.75
+      if (!/^-?\d*\.\d+$/.test(s.replace(/\s+/g, '')) && !/^-?\d+$/.test(s.trim())) return false;
+      const v = parseNumeric(s); return v !== null && close(v, q.answer);
+    }
+    case 'fraction': { // must be written as a fraction like 3/4 (any equivalent fraction is fine)
+      const m = s.replace(/\s+/g, '').match(/^(-?\d+)\/(\d+)$/); if (!m || !+m[2]) return false;
+      return close(+m[1] / +m[2], q.answer);
+    }
+    case 'percent': { // a number, optionally with %
+      if (s.includes('/')) return false; const v = parseNumeric(s); return v !== null && close(v, q.answer);
+    }
+    case 'fraction-simplest': {
+      const m = s.replace(/\s+/g, '').match(/^(-?\d+)\/(\d+)$/);
+      const [an, ad] = q.answer.split('/').map(Number);
+      if (!m) { const v = parseNumeric(s); return ad === 1 && v !== null && v === an; }
+      const n = +m[1], d = +m[2]; if (!d) return false;
+      return gcd(n, d) === 1 && n * ad === an * d;
+    }
+    case 'mixed': {
+      const m = s.match(/^(-?\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+      if (!m) return false;
+      const whole = +m[1], n = +m[2], d = +m[3]; if (!d) return false;
+      return whole === q.answer.whole && n * q.answer.d === q.answer.n * d && gcd(n, d) === 1;
+    }
+    case 'remainder': {
+      const m = s.toLowerCase().match(/^(\d+)\s*(?:r|rem|remainder)\.?\s*(\d+)$/);
+      return !!m && +m[1] === q.answer.q && +m[2] === q.answer.r;
+    }
+    case 'exact': return norm(s) === norm(q.answer);
+    default: return false;
+  }
+}
+
+const allTopics = () => Object.values(TOPICS).flat().map((t) => t.topic);
+
+
+// ---------- the test blueprint: 30 questions, Year 5 top set to Year 6 ----------
+const STRANDS = [
+  { name: 'Number and place value', count: 6, topics: ['Place value', 'Negative numbers', 'Roman numerals', 'Multiplying and dividing by 10, 100, 1000', 'Number sequences', 'Square numbers', 'Primes, factors and multiples', 'Rounding decimals'] },
+  { name: 'Calculation', count: 6, topics: ['Big adding and subtracting', 'Multiplying bigger numbers', 'Division with remainders', 'Long multiplication', 'Long division', 'Order of operations (BIDMAS)', 'Decimal multiplying and dividing', 'Decimals'] },
+  { name: 'Fractions, decimals and percentages', count: 7, topics: ['Equivalent fractions', 'Fraction of an amount', 'Simplifying fractions', 'Fractions and decimals', 'Fractions and percentages', 'Percentages of amounts', 'Mixed numbers', 'Adding fractions (different bottoms)', 'Comparing fractions', 'Multiplying fractions', 'Trickier percentages'] },
+  { name: 'Measurement and money', count: 4, topics: ['Measures', 'Perimeter', 'Area', 'Time', 'Money problems'] },
+  { name: 'Geometry', count: 3, topics: ['Angles', 'Angles in shapes', 'Shape puzzles'] },
+  { name: 'Year 6 stretch: ratio, algebra, mean', count: 4, topics: ['Ratio', 'Algebra', 'Mean (average)', 'Order of operations (BIDMAS)'] },
+];
+const TOTAL = STRANDS.reduce((s, x) => s + x.count, 0);
+const TARGET = 95;
+const SUGGESTED_MIN = 45;
+const findTopic = (name) => { for (const tier of [1, 2, 3, 4]) { const t = TOPICS[tier].find((x) => x.topic === name); if (t) return t; } throw new Error('missing topic ' + name); };
+
+function makePaper() {
+  const used = new Set(); const qs = [];
+  for (const st of STRANDS) {
+    let pool = shuffleArr(st.topics.filter((t) => !used.has(t)));
+    for (let i = 0; i < st.count; i++) {
+      if (!pool.length) pool = shuffleArr(st.topics);
+      const name = pool.shift(); used.add(name);
+      const q = findTopic(name).fn('Charlie');
+      qs.push({ strand: st.name, topic: name, text: q.text, kind: q.kind, answer: q.answer, display: q.display, given: '' });
+    }
+  }
+  return qs;
+}
+function shuffleArr(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmtTime = (ms) => { const s = Math.round(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+const fmtDate = (t) => new Date(t).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+// ---------- saved attempts (this device only) ----------
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('cm-' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('cm-' + k, JSON.stringify(v)); } catch (e) { /* ignore */ } },
+};
+let attempts = store.get('attempts', []);
+
+let test = null; let tick = null;
+const app = document.getElementById('app');
+
+function renderHome() {
+  test = null; clearInterval(tick);
+  const n = attempts.length;
+  app.innerHTML = `
+    <header><span class="tag">Year 5 · top set check</span><h1>Charlie's Maths Check</h1></header>
+    <section class="card">
+      <h2>Test ${n + 1}</h2>
+      <p>${TOTAL} questions at Year 5 top-set and Year 6 level, across six areas of maths. Every test has new questions.</p>
+      <ul class="rules">
+        <li>Do it on your own: no calculator, no help, no looking things up.</li>
+        <li>Use paper for working out.</li>
+        <li>Try to finish in about ${SUGGESTED_MIN} minutes. The clock records your time.</li>
+        <li>Answers are marked at the end, not as you go.</li>
+      </ul>
+      <button class="btn wide" id="start">Start test ${n + 1}</button>
+    </section>
+    ${n ? evidenceCard() : `<section class="card"><h3>The goal</h3><p class="muted">Three tests on different days, each scoring ${TARGET}% or more. Your results build up here after each test.</p></section>`}`;
+  document.getElementById('start').addEventListener('click', startTest);
+  if (n) wireEvidence();
+  window.scrollTo(0, 0);
+}
+
+function startTest() {
+  test = { qs: makePaper(), started: Date.now(), confirming: false };
+  renderPaper();
+  tick = setInterval(updateClock, 1000);
+}
+function updateClock() {
+  const c = document.getElementById('clock'); if (c && test) c.textContent = fmtTime(Date.now() - test.started);
+  const d = document.getElementById('donecount'); if (d && test) d.textContent = `${test.qs.filter((q) => q.given.trim()).length} / ${TOTAL} answered`;
+}
+
+function renderPaper() {
+  let num = 0; let html = `
+    <div class="sticky"><span class="clock" id="clock">0:00</span><span class="done-count" id="donecount">0 / ${TOTAL} answered</span><button class="btn" id="finish" style="font-size:16px;padding:10px 16px">Finish and mark</button></div>`;
+  for (const st of STRANDS) {
+    html += `<section class="section"><h3>${esc(st.name)}</h3>`;
+    for (const q of test.qs.filter((x) => x.strand === st.name)) {
+      const i = test.qs.indexOf(q); num++;
+      html += `<div class="q"><span class="num">${num}.</span><span class="text">${esc(q.text)}</span><input id="a${i}" data-i="${i}" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Answer to question ${num}"></div>`;
+    }
+    html += '</section>';
+  }
+  html += `<div id="confirmBox"></div><button class="btn wide" id="finish2">Finish and mark</button>`;
+  app.innerHTML = html;
+  app.querySelectorAll('.q input').forEach((inp) => {
+    inp.addEventListener('input', () => { test.qs[+inp.dataset.i].given = inp.value; updateClock(); });
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const next = document.getElementById('a' + (+inp.dataset.i + 1)); if (next) next.focus(); } });
+  });
+  document.getElementById('finish').addEventListener('click', askFinish);
+  document.getElementById('finish2').addEventListener('click', askFinish);
+  window.scrollTo(0, 0);
+}
+
+function askFinish() {
+  const blank = test.qs.filter((q) => !q.given.trim()).length;
+  if (!blank) return markTest();
+  const box = document.getElementById('confirmBox');
+  box.innerHTML = `<section class="card confirm"><p><b>${blank} question${blank > 1 ? 's are' : ' is'} still blank.</b> Blank answers are marked wrong.</p>
+    <div class="actions"><button class="btn ghost" id="back">Keep going</button><button class="btn" id="markNow">Mark it now</button></div></section>`;
+  document.getElementById('back').addEventListener('click', () => { box.innerHTML = ''; const first = test.qs.findIndex((q) => !q.given.trim()); document.getElementById('a' + first).focus(); });
+  document.getElementById('markNow').addEventListener('click', markTest);
+  box.scrollIntoView({ block: 'center' });
+}
+
+function markTest() {
+  clearInterval(tick);
+  const ms = Date.now() - test.started;
+  for (const q of test.qs) q.ok = check(q, q.given);
+  const right = test.qs.filter((q) => q.ok).length;
+  const strands = STRANDS.map((st) => { const qs = test.qs.filter((q) => q.strand === st.name); return { name: st.name, right: qs.filter((q) => q.ok).length, total: qs.length }; });
+  const missed = test.qs.filter((q) => !q.ok).map((q) => q.topic);
+  const attempt = { n: attempts.length + 1, at: Date.now(), right, total: TOTAL, pct: Math.round((100 * right) / TOTAL), ms, strands, missed };
+  attempts.push(attempt); store.set('attempts', attempts);
+  renderResults(attempt, test.qs);
+}
+
+function pillFor(pct) { return pct >= TARGET ? 'good' : pct < 80 ? 'bad' : ''; }
+function meterClass(r, t) { const p = r / t; return p >= 0.9 ? '' : p >= 0.6 ? 'mid' : 'low'; }
+
+function renderResults(a, qs) {
+  const verdict = a.pct >= TARGET ? `Target hit: ${TARGET}% or more.` : a.pct >= 85 ? `Very close to the ${TARGET}% target.` : 'Some areas to practise before the next test.';
+  let num = 0;
+  app.innerHTML = `
+    <section class="card" style="text-align:center;justify-items:center">
+      <span class="tag">Test ${a.n} · ${esc(fmtDate(a.at))}</span>
+      <div class="score">${a.right}/${a.total}</div>
+      <div class="pct">${a.pct}% · ${fmtTime(a.ms)}</div>
+      <span class="pill ${pillFor(a.pct)}">${verdict}</span>
+    </section>
+    <section class="card">
+      <h3>By area of maths</h3>
+      <div class="strands">${a.strands.map((s) => `<div class="strand"><span class="name">${esc(s.name)}</span><span class="val">${s.right}/${s.total}</span><div class="meter"><div class="${meterClass(s.right, s.total)}" style="width:${(100 * s.right) / s.total}%"></div></div></div>`).join('')}</div>
+    </section>
+    ${evidenceCard()}
+    <section class="card">
+      <h3>Marked paper</h3>
+      ${qs.map((q) => { num++; return `<div class="q ${q.ok ? 'right' : 'wrong'}"><span class="num">${num}.</span><span class="text">${esc(q.text)}</span><span class="verdict">${q.ok ? '✓ ' + esc(q.given) : `✗ ${q.given.trim() ? esc(q.given) : '(blank)'} · answer: ${esc(q.display)}`}</span></div>`; }).join('')}
+    </section>
+    <button class="btn ghost wide" id="home">Back to start</button>`;
+  wireEvidence();
+  document.getElementById('home').addEventListener('click', renderHome);
+  window.scrollTo(0, 0);
+}
+
+// ---------- evidence across all tests ----------
+function weakTopics() {
+  const count = {}; for (const a of attempts) for (const t of a.missed) count[t] = (count[t] || 0) + 1;
+  return Object.entries(count).sort((x, y) => y[1] - x[1]);
+}
+function strandTotals() {
+  return STRANDS.map((st) => { let r = 0, t = 0; for (const a of attempts) { const s = a.strands.find((x) => x.name === st.name); if (s) { r += s.right; t += s.total; } } return { name: st.name, right: r, total: t }; });
+}
+function lastThree() { return attempts.slice(-3); }
+function evidenceCard() {
+  const last = lastThree(); const hits = last.filter((a) => a.pct >= TARGET).length;
+  const weak = weakTopics().slice(0, 6);
+  const avg = Math.round(attempts.reduce((s, a) => s + a.pct, 0) / attempts.length);
+  const slots = [0, 1, 2].map((i) => last[i] ? `<span class="${last[i].pct >= TARGET ? 'hit' : 'miss'}">Test ${last[i].n}<br>${last[i].pct}%</span>` : '<span>Not done</span>').join('');
+  return `<section class="card">
+      <h3>Evidence so far</h3>
+      <p class="muted">Goal: three tests in a row at ${TARGET}% or more. ${hits === 3 ? '<b>Goal reached.</b>' : `${hits} of the last ${last.length} hit the target.`}</p>
+      <div class="goal">${slots}</div>
+      <div class="table-wrap"><table><thead><tr><th>Test</th><th>Date</th><th>Score</th><th>Time</th></tr></thead><tbody>
+        ${attempts.map((a) => `<tr><td>${a.n}</td><td>${esc(fmtDate(a.at))}</td><td>${a.right}/${a.total} (${a.pct}%)</td><td>${fmtTime(a.ms)}</td></tr>`).join('')}
+      </tbody></table></div>
+      <p><b>Average:</b> ${avg}% over ${attempts.length} test${attempts.length > 1 ? 's' : ''}</p>
+      ${weak.length ? `<div><b>Topics to practise</b> (most missed first)<ul class="weak">${weak.map(([t, c]) => `<li>${esc(t)} (missed ${c}×)</li>`).join('')}</ul></div>` : '<p><b>No weak topics yet.</b> Every question right so far.</p>'}
+      <h3>Send the results</h3>
+      <div class="actions">
+        <button class="btn" id="share" hidden>Send</button>
+        <a class="btn ghost" id="wa" target="_blank" rel="noopener">WhatsApp</a>
+        <a class="btn ghost" id="mail">Email</a>
+        <button class="btn ghost" id="copy">Copy</button>
+      </div>
+      <p class="muted" id="sent" hidden></p>
+    </section>`;
+}
+function reportText() {
+  const lines = [`Charlie's Maths Check: Year 5 top-set test (${TOTAL} questions, no calculator, done alone)`, ''];
+  for (const a of attempts) lines.push(`Test ${a.n}, ${fmtDate(a.at)}: ${a.right}/${a.total} = ${a.pct}% in ${fmtTime(a.ms)}`);
+  lines.push('', 'By area (all tests):');
+  for (const s of strandTotals()) lines.push(`${s.right === s.total ? '✅' : '•'} ${s.name}: ${s.right}/${s.total} (${s.total ? Math.round((100 * s.right) / s.total) : 0}%)`);
+  const weak = weakTopics().slice(0, 6);
+  if (weak.length) lines.push('', 'To practise: ' + weak.map(([t, c]) => `${t} (${c}×)`).join(', '));
+  return lines.join('\n');
+}
+function wireEvidence() {
+  const text = reportText();
+  const sent = document.getElementById('sent'); const done = (m) => { sent.textContent = m; sent.hidden = false; };
+  document.getElementById('wa').href = 'https://wa.me/?text=' + encodeURIComponent(text);
+  document.getElementById('mail').href = 'mailto:?subject=' + encodeURIComponent("Charlie's Maths Check results") + '&body=' + encodeURIComponent(text);
+  document.getElementById('copy').addEventListener('click', () => navigator.clipboard.writeText(text).then(() => done('Copied. Paste it into a message.'), () => done(text)));
+  const sh = document.getElementById('share');
+  if (navigator.share) { sh.hidden = false; sh.addEventListener('click', () => navigator.share({ title: "Charlie's Maths Check", text }).catch(() => {})); }
+}
+
+renderHome();
+</script>
+</body>
+</html>
