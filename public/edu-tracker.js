@@ -144,7 +144,8 @@
     },
     // A question has just appeared on screen.
     shown: function () { lastShown = now(); },
-    // The child has answered. Fields: topic, question, given, answer, ok, and optionally subject, level, ms, id, timeout, skipped, partial.
+    // The child has answered. Fields: topic, question, given, answer, ok, and optionally subject, level, ms, id, timeout, skipped, partial,
+    // retry (a second go at the same question: shown on the dashboard but not counted in the score).
     answer: function (a) {
       if (!cfg.child) return;
       if (!started) start();
@@ -155,7 +156,7 @@
         subject: a.subject || cfg.subject, topic: a.topic || 'Other', level: a.level || '',
         question: String(a.question == null ? '' : a.question), given: String(a.given == null ? '' : a.given), answer: String(a.answer == null ? '' : a.answer),
         ok: a.ok === true, ms: typeof a.ms === 'number' ? a.ms : Math.min(t - (lastShown || t), 30 * 60 * 1000),
-        timeout: a.timeout ? true : undefined, skipped: a.skipped ? true : undefined, partial: a.partial ? true : undefined,
+        timeout: a.timeout ? true : undefined, skipped: a.skipped ? true : undefined, partial: a.partial ? true : undefined, retry: a.retry ? true : undefined,
       });
       lastShown = t;
       flush();

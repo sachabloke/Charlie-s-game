@@ -98,7 +98,7 @@ class Tracker {
       subject: clean(f.subject, 20) || 'Maths', topic: clean(f.topic, 60) || 'Other', level: clean(f.level, 20),
       q: clean(f.question, 300), given: clean(f.given, 80), answer: clean(f.answer, 120),
       ok: !!f.ok, ms: Number.isFinite(f.ms) ? Math.max(0, Math.round(f.ms)) : null,
-      ...(f.timeout ? { timeout: true } : {}), ...(f.skipped ? { skipped: true } : {}),
+      ...(f.timeout ? { timeout: true } : {}), ...(f.skipped ? { skipped: true } : {}), ...(f.retry ? { retry: true } : {}),
     });
     this.touch(sid, at);
   }
@@ -143,7 +143,7 @@ class Tracker {
           subject: clean(e.subject, 20) || 'Maths', topic: clean(e.topic, 60) || 'Other', level: clean(e.level, 20),
           q: clean(e.question, 300), given: clean(e.given, 80), answer: clean(e.answer, 120),
           ok: e.ok === true, ms: Number.isFinite(e.ms) ? Math.min(30 * 60 * 1000, Math.max(0, Math.round(e.ms))) : null,
-          ...(e.timeout ? { timeout: true } : {}), ...(e.skipped ? { skipped: true } : {}), ...(e.partial ? { partial: true } : {}),
+          ...(e.timeout ? { timeout: true } : {}), ...(e.skipped ? { skipped: true } : {}), ...(e.partial ? { partial: true } : {}), ...(e.retry ? { retry: true } : {}),
         };
         if (this.saveAnswer(s, a)) saved++;
       } else if (e.t === 'start' || e.t === 'ping') ended = false;

@@ -37,6 +37,7 @@ What is connected:
 
 | Game | Who is recorded |
 |---|---|
+| **Charlie's Quest** (charlie-quest-2b7841.netlify.app) | Charlie. Quest, Dungeon, Test mode and Balloon Rescue. Daddy play is never sent. Linked by `public/links/charlie-quest.js` (two lines added to the game's pages; see the top of that file). |
 | Maths Royale (`/`) | Whoever types a name starting with **Charlie** or **Leo** on the start screen. Friends and bots are never recorded. |
 | Charlie's English (`/english/`) | Charlie |
 | Charlie's Maths Check (`/maths-check/`) | Charlie (a test closed half way still sends the answers typed so far) |
@@ -64,10 +65,11 @@ Other settings (all optional, same place in Render):
 
 ### Connecting a new game
 
-Any game that runs in a browser can report to the dashboard with one line in its page:
+Any game that runs in a browser can report to the dashboard. Copy `public/edu-tracker.js` into the
+game's own folder (so the game never waits on this server) and add one line to its page:
 
 ```html
-<script src="https://maths-royale.onrender.com/edu-tracker.js" data-child="Leo" data-game="Leo's game" data-subject="Maths"></script>
+<script src="edu-tracker.js" data-child="Leo" data-game="Leo's game" data-subject="Maths" data-endpoint="https://maths-royale.onrender.com/api/track"></script>
 ```
 
 and one call each time the child answers:
@@ -76,6 +78,8 @@ and one call each time the child answers:
 EduTracker.shown(); // optional: when the question appears, so the time taken is exact
 EduTracker.answer({ topic: 'Times tables', question: '7 × 8 = ?', given: '54', answer: '56', ok: false });
 ```
+
+Add `retry: true` for a second go at the same question: it is listed on the dashboard but not counted in the score.
 
 Time spent, closing the app and saving are handled by the tracker. If the game asks who is playing,
 leave out `data-child` and call `EduTracker.init({ child: name })` once the name is known.

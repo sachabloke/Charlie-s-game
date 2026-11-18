@@ -50,6 +50,8 @@ test('a re-sent answer with the same id replaces the earlier copy (half-finished
   assert.equal(d.answers.length, 1);
   assert.equal(d.answers[0].ok, true);
   assert.equal(d.answers[0].partial, undefined);
+  t.ingest(batch([answer('q2', true, { retry: true })]), 'ip');
+  assert.equal(t.dataFor('Charlie').answers[1].retry, true);
 });
 
 test('bad or oversized input is refused or trimmed', async () => {
@@ -197,13 +199,15 @@ test('dashboard figures: time, accuracy, weak and strong topics, days', () => {
     ...[true, true, true, true].map((ok, i) => ans('s1', 'A', now - 2 * H + i * 1000, 'Times tables', ok)),
     ...[false, false, true].map((ok, i) => ans('s1', 'A', now - 2 * H + 60000 + i * 1000, 'Ratio', ok)),
     ans('s1', 'A', now - 2 * H + 90000, 'Ratio', false, { skipped: true }),
+    ans('s1', 'A', now - 2 * H + 95000, 'Ratio', true, { retry: true }), // second go: listed, not scored
     ans('s2', 'B', now - 3 * D + 1000, 'Ratio', false),
     ans('s2', 'B', now - 3 * D + 2000, 'Algebra', true),
     ans('s3', 'A', now - 20 * D + 1000, 'Algebra', false),
   ];
   const week = stats.summarise({ sessions, answers }, { range: '7', now });
   assert.equal(week.totals.activeMs, 25 * 60000); // 15 active + 10 by the clock; the empty visit is ignored
-  assert.equal(week.totals.answered, 9); assert.equal(week.totals.right, 6); assert.equal(week.totals.skipped, 1);
+  assert.equal(week.totals.answered, 9); assert.equal(week.totals.right, 6); assert.equal(week.totals.skipped, 2);
+  assert.equal(week.sessions[0].answers.length, 9); // the skipped sum and the second go are still listed in the session
   assert.equal(week.totals.daysPractised, 2); assert.equal(week.totals.spanDays, 7);
   assert.equal(week.sessions.length, 2); assert.equal(week.sessions[0].id, 's1');
   assert.deepEqual(week.weak.map((t) => t.topic), ['Ratio']);
