@@ -58,9 +58,10 @@ class PgStore {
   constructor(url) {
     this.kind = 'postgres'; this.durable = true;
     const { Pool } = require('pg');
-    const local = /@(localhost|127\.0\.0\.1|\[::1\])[:/]/.test(url) || /sslmode=disable/.test(url) || /host=%2F|host=\//.test(url);
-    // Hosted databases need an encrypted connection; an "sslmode=..." in the link overrides this default.
-    this.pool = new Pool({ connectionString: url, max: 3, ssl: !local });
+    // A database reached over the public internet needs an encrypted connection. One on the same machine or on the
+    // host's private network (a bare name with no dots, as Render gives its own databases) does not offer one.
+    // An "sslmode=..." in the link overrides this default.
+    this.pool = new Pool({ connectionString: url, max: 3, ssl: needsSsl(url) });
     this.pool.on('error', (e) => console.error('Database connection problem:', e.message));
     this.pending = new Map(); // key -> { sql, params }; newest write for a row wins
     this.timer = null; this.busy = Promise.resolve();
@@ -106,6 +107,13 @@ class PgStore {
   async close() { this.closing = true; await this.flush(); await this.pool.end(); }
 }
 
+function needsSsl(url) {
+  if (/sslmode=disable/.test(url) || /host=%2F|host=\//.test(url)) return false;
+  let host = '';
+  try { host = new URL(url).hostname; } catch (e) { return true; }
+  return !(host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '::1' || !host.includes('.'));
+}
+
 function createStore(opts = {}) {
   if (opts.memory) return new MemoryStore();
   const url = opts.databaseUrl !== undefined ? opts.databaseUrl : process.env.DATABASE_URL;
@@ -113,4 +121,4 @@ function createStore(opts = {}) {
   return new FileStore(opts.dir || process.env.DATA_DIR || path.join(__dirname, '..', 'data'));
 }
 
-module.exports = { createStore, MemoryStore, FileStore, PgStore };
+module.exports = { createStore, needsSsl, MemoryStore, FileStore, PgStore };

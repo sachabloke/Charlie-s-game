@@ -25,7 +25,7 @@ const app = express();
 app.set('trust proxy', 1); // the host's front door passes on the visitor's address
 app.use('/api', routes(tracker));
 app.use(express.static(path.join(__dirname, '..', 'public'), { etag: true, lastModified: true, setHeaders: (res, filePath) => { res.setHeader('Cache-Control', /vendor/.test(filePath) ? 'public, max-age=86400' : 'no-cache'); } }));
-app.get('/health', (_req, res) => res.json({ ok: true, rooms: rooms.size }));
+app.get('/health', (_req, res) => res.json({ ok: true, rooms: rooms.size, results: tracker.loadFailed ? 'database not answering' : tracker.store.durable ? 'saved for good' : 'not saved yet' }));
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });

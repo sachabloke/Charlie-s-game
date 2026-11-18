@@ -7,7 +7,7 @@ const path = require('path');
 const http = require('http');
 const express = require('express');
 const { Tracker, routes } = require('../server/track');
-const { createStore } = require('../server/store');
+const { createStore, needsSsl } = require('../server/store');
 const { Game } = require('../server/game');
 const stats = require('../public/dashboard/stats.js');
 
@@ -131,6 +131,15 @@ test('results survive a restart when kept in a file', async () => {
   assert.equal(c.dataFor('Charlie').answers.length, 0);
   assert.equal(c.dataFor('Charlie').sessions.length, 0);
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('database connections are encrypted over the internet, plain on the same machine or private network', () => {
+  assert.equal(needsSsl('postgresql://u:p@ep-cool-name-123.eu-west-2.aws.neon.tech/db'), true);
+  assert.equal(needsSsl('postgres://u:p@dpg-abc123-a.oregon-postgres.render.com/db'), true);
+  assert.equal(needsSsl('postgres://u:p@dpg-abc123-a/db'), false);
+  assert.equal(needsSsl('postgres://u:p@dpg-abc123-a:5432/db'), false);
+  assert.equal(needsSsl('postgres://u:p@localhost:5432/db'), false);
+  assert.equal(needsSsl('postgres://u:p@db.example.com/db?sslmode=disable'), false);
 });
 
 // ---------- over the web ----------
