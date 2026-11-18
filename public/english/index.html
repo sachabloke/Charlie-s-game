@@ -125,6 +125,7 @@ header.top { display: flex; align-items: center; justify-content: space-between;
 
 <div class="wrap" id="app"></div>
 
+<script src="/edu-tracker.js" data-child="Charlie" data-game="Charlie's English" data-subject="English"></script>
 <script>
 'use strict';
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -450,6 +451,7 @@ function nextQuestion() {
   if (quiz.items.length >= QUIZ_LEN) return showResults();
   quiz.items.push({ ...makeQuestion(quiz.topicIds), answered: false, correct: false, given: null });
   renderQuestion();
+  if (window.EduTracker) EduTracker.shown();
 }
 const norm = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '');
 function answer(given) {
@@ -458,6 +460,8 @@ function answer(given) {
   item.answered = true; item.correct = ok; item.given = given;
   if (ok) quiz.score++;
   const s = (stats[item.topic.id] ||= { right: 0, total: 0 }); s.total++; if (ok) s.right++; store.set('stats', stats);
+  // Send this answer to the parent dashboard straight away.
+  if (window.EduTracker) EduTracker.answer({ topic: item.topic.name, question: item.q.text, given, answer: item.q.kind === 'typed' ? item.q.accept.join(' or ') : item.q.answer, ok, level: (LEVELS.find((l) => l.id === level) || LEVELS[1]).name });
   renderQuestion();
 }
 

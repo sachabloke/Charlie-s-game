@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'self'">
+<title>Learning dashboard</title>
+<style>
+/* A parent's reading page: calm neutral surfaces, one blue for "right", one orange for "wrong". The numbers are the loud part. */
+:root {
+  color-scheme: light;
+  --plane: #f4f4f1; --surface: #fcfcfb; --surface-2: #f1f0ec;
+  --ink: #0b0b0b; --ink-2: #52514e; --muted: #77756f;
+  --hair: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,.10);
+  --right: #2a78d6; --right-track: #cde2fb; --wrong: #eb6834;
+  --accent: #256abf; --accent-ink: #ffffff; --focus: #2a78d6;
+  --good: #0a7a0a; --good-bg: #e4f4e4; --bad: #c22f2f; --bad-bg: #fbe9e7; --warn-bg: #fff3d6; --warn-ink: #6b4a00; --warn-line: #f0cf7a;
+  --live: #0ca30c;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --plane: #0d0d0d; --surface: #1a1a19; --surface-2: #242422;
+    --ink: #f0efec; --ink-2: #c3c2b7; --muted: #99978f;
+    --hair: #2c2c2a; --axis: #45453f; --border: rgba(255,255,255,.10);
+    --right: #3987e5; --right-track: #173556; --wrong: #d95926;
+    --accent: #3987e5; --accent-ink: #0b0b0b; --focus: #6da7ec;
+    --good: #37b837; --good-bg: #12301a; --bad: #f07f7f; --bad-bg: #3a1b1b; --warn-bg: #33290d; --warn-ink: #f3d68a; --warn-line: #6b5518;
+    --live: #0ca30c;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--plane); color: var(--ink); font: 15px/1.45 var(--sans); }
+h1, h2, h3, p { margin: 0; }
+h1 { font-size: 22px; font-weight: 650; letter-spacing: -.01em; }
+h2 { font-size: 16px; font-weight: 650; }
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+.muted { color: var(--muted); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+[hidden] { display: none !important; }
+
+.wrap { max-width: 1120px; margin: 0 auto; padding: 20px 16px 56px; display: grid; gap: 16px; }
+.stack { display: grid; gap: 16px; min-width: 0; }
+
+/* ---------- PIN screen ---------- */
+.gate { min-height: 100dvh; display: grid; place-items: center; padding: 16px; }
+.gate form { width: min(380px, 100%); background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px; display: grid; gap: 14px; }
+.gate input { width: 100%; padding: 12px 14px; font-size: 18px; letter-spacing: .12em; border-radius: 10px; border: 1px solid var(--axis); background: var(--plane); }
+.btn { padding: 11px 16px; border-radius: 10px; border: 1px solid transparent; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.quiet { background: transparent; color: var(--ink-2); border-color: var(--border); font-weight: 500; padding: 7px 12px; }
+.btn.quiet:hover { background: var(--surface-2); }
+.err { color: var(--bad); min-height: 1.4em; }
+
+/* ---------- top bar ---------- */
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.top .title { flex: 1 1 200px; min-width: 0; }
+.top .title p { font-size: 13px; }
+.seg { display: inline-flex; background: var(--surface-2); border-radius: 10px; padding: 3px; gap: 2px; max-width: 100%; overflow-x: auto; }
+.seg button { border: 0; background: transparent; padding: 7px 14px; border-radius: 8px; color: var(--ink-2); font-weight: 550; white-space: nowrap; display: inline-flex; align-items: center; gap: 7px; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--border), 0 1px 2px rgba(0,0,0,.06); }
+.kids button { font-size: 16px; padding: 8px 18px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--live); flex: none; }
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+.filters select { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); max-width: 100%; }
+.live { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; color: var(--good); }
+
+.notice { background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line); border-radius: 12px; padding: 12px 14px; font-size: 14px; }
+
+/* ---------- cards ---------- */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; min-width: 0; }
+.card > h2 { margin-bottom: 4px; }
+.card > .hint { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+.grid2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+
+.kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; min-width: 0; }
+.kpi .label { color: var(--ink-2); font-size: 13px; }
+.kpi .value { font-size: 30px; font-weight: 650; letter-spacing: -.02em; line-height: 1.15; margin-top: 2px; }
+.kpi .note { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+/* ---------- topic lists (needs practice / going well) ---------- */
+.tlist { display: grid; gap: 14px; }
+.titem .row { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.titem .name { font-weight: 600; min-width: 0; }
+.titem .fig { color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 14px; }
+.meter { height: 8px; border-radius: 4px; background: var(--right-track); overflow: hidden; margin-top: 6px; }
+.meter i { display: block; height: 100%; background: var(--right); border-radius: 4px; }
+.titem .eg { color: var(--ink-2); font-size: 13px; margin-top: 6px; overflow-wrap: anywhere; }
+.empty { color: var(--muted); font-size: 14px; padding: 6px 0; }
+
+/* ---------- charts ---------- */
+.chart { position: relative; }
+.legend { display: flex; gap: 14px; font-size: 13px; color: var(--ink-2); margin-bottom: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.plot { position: relative; height: 170px; margin-left: 34px; }
+.gridline { position: absolute; left: 0; right: 0; height: 0; border-top: 1px solid var(--hair); }
+.gridline.base { border-top-color: var(--axis); }
+.gridline span { position: absolute; right: calc(100% + 6px); top: -8px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cols { position: absolute; inset: 0; display: flex; align-items: stretch; }
+.col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; padding: 0 1px; border-radius: 4px; }
+.col:hover, .col:focus-visible { background: color-mix(in srgb, var(--ink) 5%, transparent); outline: none; }
+.col i { display: block; width: min(24px, 100%); min-height: 2px; background: var(--right); }
+.col i.w { background: var(--wrong); }
+.col i:first-child { border-radius: 4px 4px 0 0; }
+.xaxis { display: flex; margin-left: 34px; margin-top: 6px; }
+.xaxis span { flex: 1 1 0; min-width: 0; display: flex; justify-content: center; font-size: 11px; color: var(--muted); white-space: nowrap; }
+.xaxis.many span:last-child { justify-content: flex-end; }
+.tip { position: fixed; z-index: 20; pointer-events: none; background: var(--ink); color: var(--surface); padding: 7px 10px; border-radius: 8px; font-size: 12.5px; line-height: 1.4; max-width: 240px; white-space: pre-line; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+
+/* ---------- tables ---------- */
+.tablewrap { margin: 0 -18px -6px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-weight: 550; color: var(--muted); font-size: 12.5px; padding: 8px 10px; border-bottom: 1px solid var(--hair); white-space: nowrap; }
+td { padding: 10px; border-bottom: 1px solid var(--hair); vertical-align: middle; }
+th:first-child, td:first-child { padding-left: 18px; }
+th:last-child, td:last-child { padding-right: 18px; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.main { cursor: pointer; }
+tr.main:hover td { background: color-mix(in srgb, var(--ink) 3%, transparent); }
+tr.detail td { background: var(--surface-2); padding: 12px 18px 16px; }
+tbody:last-child tr:last-child td { border-bottom: 0; }
+.rowbtn { all: unset; cursor: pointer; display: inline-flex; align-items: baseline; gap: 8px; font-weight: 600; max-width: 100%; }
+.rowbtn .chev { color: var(--muted); font-size: 11px; width: 10px; flex: none; transition: transform .12s; }
+.rowbtn[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.sub { display: block; color: var(--muted); font-size: 12.5px; font-weight: 400; }
+.acc { display: flex; align-items: center; gap: 8px; min-width: 120px; }
+.acc .meter { flex: 1; margin: 0; min-width: 50px; }
+.acc b { font-weight: 600; width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
+.form { display: inline-flex; gap: 3px; vertical-align: middle; }
+.form i { width: 9px; height: 9px; border-radius: 50%; background: var(--right); }
+.form i.x { background: transparent; box-shadow: inset 0 0 0 2px var(--wrong); }
+.sub .tag { margin-left: 4px; }
+.tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.tag.weak { background: var(--bad-bg); color: var(--bad); }
+.tag.strong { background: var(--good-bg); color: var(--good); }
+.tag.plain { background: var(--surface-2); color: var(--ink-2); }
+.more { margin-top: 12px; }
+
+/* ---------- answer lists ---------- */
+.answers { display: grid; gap: 8px; }
+.ans { display: grid; grid-template-columns: 22px 1fr; gap: 2px 8px; align-items: start; }
+.ans .mark { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; margin-top: 1px; }
+.ans.ok .mark { background: var(--good-bg); color: var(--good); }
+.ans.no .mark { background: var(--bad-bg); color: var(--bad); }
+.ans.skip .mark { background: var(--surface-2); color: var(--muted); box-shadow: inset 0 0 0 1px var(--border); }
+.ans .q { font-weight: 550; white-space: pre-line; overflow-wrap: anywhere; }
+.ans .a { grid-column: 2; color: var(--ink-2); font-size: 13.5px; overflow-wrap: anywhere; }
+.ans .a b { color: var(--ink); font-weight: 600; }
+.ans .a .said { text-decoration: line-through; text-decoration-color: var(--bad); }
+.linkbtn { all: unset; cursor: pointer; color: var(--muted); font-size: 13px; text-decoration: underline; }
+.linkbtn:hover { color: var(--bad); }
+footer { color: var(--muted); font-size: 13px; text-align: center; }
+
+@media (max-width: 640px) {
+  .hide-s { display: none; }
+  .kpi .value { font-size: 26px; }
+  .card { padding: 16px; }
+  .tablewrap { margin: 0 -16px -6px; }
+  th:first-child, td:first-child { padding-left: 16px; }
+  th:last-child, td:last-child { padding-right: 16px; }
+  tr.detail td { padding: 12px 16px 16px; }
+  .acc { min-width: 92px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="gate" class="gate" hidden></div>
+<div id="app" class="wrap" hidden>
+  <header class="top">
+    <div class="title"><h1>Learning dashboard</h1><p class="muted" id="updated">&nbsp;</p></div>
+    <div class="seg kids" id="kids" role="group" aria-label="Child"></div>
+    <button class="btn quiet" id="lock" type="button">Lock</button>
+  </header>
+  <div class="filters">
+    <div class="seg" id="ranges" role="group" aria-label="Period"></div>
+    <label class="sr" for="game">Game</label>
+    <select id="game"></select>
+    <span class="live" id="live" hidden><span class="dot"></span><span id="liveText"></span></span>
+  </div>
+  <div id="notice" class="notice" hidden></div>
+  <main id="view" class="stack"></main>
+  <footer>Results arrive as each answer is given. This page refreshes itself every 20 seconds.</footer>
+</div>
+<div id="tip" class="tip" hidden></div>
+<noscript>This page needs JavaScript.</noscript>
+<script src="stats.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>

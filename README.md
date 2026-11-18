@@ -18,6 +18,68 @@ out is to answer sums. Harder sums unlock better loot:
 Wrong answers show the correct answer, and at the end of each game every player gets a
 **maths report** showing which topics they got right and wrong.
 
+## Parent dashboard
+
+**Open: https://maths-royale.onrender.com/dashboard** (the first visit asks you to choose a PIN; after that only the PIN opens it).
+
+It shows, for each child:
+
+- **When they practised and for how long** (only time they were actually doing something counts, not a tab left open).
+- **Every question, what they answered and the right answer.**
+- **Weak topics** (under 70% right after 3 or more tries) and **strong topics** (90% or more).
+- Time and answers per day, every session, and the latest mistakes.
+
+Answers are sent the moment they are given. When a child closes the game or switches away, anything
+left is sent straight away and the session is closed. If the internet drops, answers wait on the
+device and are sent next time.
+
+What is connected:
+
+| Game | Who is recorded |
+|---|---|
+| Maths Royale (`/`) | Whoever types a name starting with **Charlie** or **Leo** on the start screen. Friends and bots are never recorded. |
+| Charlie's English (`/english/`) | Charlie |
+| Charlie's Maths Check (`/maths-check/`) | Charlie (a test closed half way still sends the answers typed so far) |
+
+The Roblox version is not connected.
+
+### Keeping results for good (one-time, about 5 minutes)
+
+The free Render server forgets its files every time it restarts, so results need a small free database:
+
+1. Go to https://neon.tech, sign up (free) and create a project. Any name will do.
+2. Copy the **connection string** it shows you (it starts with `postgresql://`).
+3. In Render, open the **maths-royale** service, go to **Environment**, add a variable called
+   `DATABASE_URL`, paste the connection string as its value and save.
+
+Render restarts the game and from then on every result is kept. Until this is done the dashboard
+works but shows a warning, and results disappear when the server restarts.
+
+Other settings (all optional, same place in Render):
+
+| Variable | What it does |
+|---|---|
+| `CHILDREN` | The children to record, separated by commas. Default `Charlie,Leo`. |
+| `DASHBOARD_PIN` | Sets the PIN yourself. Also the way to reset a forgotten PIN. |
+
+### Connecting a new game
+
+Any game that runs in a browser can report to the dashboard with one line in its page:
+
+```html
+<script src="https://maths-royale.onrender.com/edu-tracker.js" data-child="Leo" data-game="Leo's game" data-subject="Maths"></script>
+```
+
+and one call each time the child answers:
+
+```js
+EduTracker.shown(); // optional: when the question appears, so the time taken is exact
+EduTracker.answer({ topic: 'Times tables', question: '7 × 8 = ?', given: '54', answer: '56', ok: false });
+```
+
+Time spent, closing the app and saving are handled by the tracker. If the game asks who is playing,
+leave out `data-child` and call `EduTracker.init({ child: name })` once the name is known.
+
 ## Quick start (one computer)
 
 1. Install Node.js from https://nodejs.org (version 18 or newer).
@@ -81,6 +143,7 @@ It prints a temporary public address you can share. Your computer has to stay on
 - Sums live in `server/maths.js`. Each topic is a few lines; copy one to add your own.
 - Guns, healing items and how often each chest colour appears are in `server/items.js`.
 - Game numbers (time to answer, match length, storm timing, chest count) are at the top of `server/game.js`.
+- The dashboard is `public/dashboard/`; collecting and storing results is `server/track.js` and `server/store.js`.
 
 ## Updates
 
@@ -91,4 +154,4 @@ Every change pushed to this repository is deployed to Render automatically throu
 ```
 npm test
 ```
-Checks that every generated sum accepts its own answer and plays a full simulated match with bots.
+Checks that every generated sum accepts its own answer, plays a full simulated match with bots, and checks that answers reach the dashboard, stay private behind the PIN and survive a restart.

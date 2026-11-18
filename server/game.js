@@ -88,6 +88,7 @@ function generateWorld() {
 class Game {
   constructor(code, onEmpty) {
     this.code = code; this.onEmpty = onEmpty;
+    this.onAnswer = null; // set by the server to send each answer to the parent dashboard
     this.players = new Map();
     this.phase = 'lobby'; this.hostId = null;
     this.settings = { mode: 'dm', bots: 2, difficulty: 'normal' };
@@ -289,13 +290,13 @@ class Game {
     p.lastTopic = q.topic;
     c.busyBy = p.id;
     const limit = QUESTION_MS + (q.tier - 1) * 10000;
-    p.question = { kind: 'chest', chestId: c.id, q, deadline: now() + limit };
+    p.question = { kind: 'chest', chestId: c.id, q, askedAt: now(), deadline: now() + limit };
     send(p.ws, { t: 'question', kind: 'chest', chestId: c.id, rarity: c.rarity, topic: q.topic, text: q.text, hint: q.hint, timeLimit: limit });
   }
   askRespawn(p) {
     const q = maths.generate(Math.min(4, Math.max(1, (this.settings.difficulty === 'hard' ? 2 : 1) + Math.max(0, p.level || 0))), p.name, p.lastTopic, this.weakTopics(p));
     p.lastTopic = q.topic;
-    p.question = { kind: 'respawn', q, deadline: now() + QUESTION_MS * 2 };
+    p.question = { kind: 'respawn', q, askedAt: now(), deadline: now() + QUESTION_MS * 2 };
     send(p.ws, { t: 'question', kind: 'respawn', rarity: 'common', topic: q.topic, text: q.text, hint: q.hint, timeLimit: QUESTION_MS * 2 });
   }
   recordAnswer(p, q, correct) {
@@ -306,10 +307,16 @@ class Game {
     else { p.wrong++; p.streak = 0; }
     const t = (p.byTopic[q.topic] ||= { right: 0, wrong: 0 }); if (correct) t.right++; else t.wrong++;
   }
+  // Tell the dashboard about a sum a real player has just finished with.
+  report(p, qs, given, ok, flags = {}) {
+    if (!this.onAnswer || p.isBot) return;
+    try { this.onAnswer(p, { topic: qs.q.topic, tier: qs.q.tier, question: qs.q.text, given: given == null ? '' : String(given), answer: qs.q.display, ok, ms: now() - (qs.askedAt || now()), ...flags }); } catch (e) { /* never let reporting break the game */ }
+  }
   answer(p, raw) {
     const qs = p.question; if (!qs) return;
     const correct = maths.check(qs.q, raw);
     this.recordAnswer(p, qs.q, correct);
+    this.report(p, qs, raw, correct);
     this.pushEvent({ k: 'answer', name: p.name, color: p.color, correct, topic: qs.q.topic });
     if (qs.kind === 'chest') {
       const c = this.chests.find((c) => c.id === qs.chestId);
@@ -334,6 +341,7 @@ class Game {
   cancelQuestion(p) {
     const qs = p.question; if (!qs || qs.kind !== 'chest') return;
     const c = this.chests.find((c) => c.id === qs.chestId); if (c) c.busyBy = null;
+    this.report(p, qs, '', false, { skipped: true });
     p.question = null;
   }
 
@@ -475,7 +483,7 @@ class Game {
     // question timeouts (alive or waiting to respawn)
     for (const p of this.players.values()) {
       if (p.question && t > p.question.deadline) {
-        const qs = p.question; this.recordAnswer(p, qs.q, false); p.question = null;
+        const qs = p.question; this.recordAnswer(p, qs.q, false); this.report(p, qs, '', false, { timeout: true }); p.question = null;
         if (qs.kind === 'chest') { const c = this.chests.find((c) => c.id === qs.chestId); if (c) { c.busyBy = null; c.lockedUntil = t + 4000; } send(p.ws, { t: 'result', kind: 'chest', correct: false, answer: qs.q.display, loot: [], timeout: true, topic: qs.q.topic }); }
         else { send(p.ws, { t: 'result', kind: 'respawn', correct: false, answer: qs.q.display, timeout: true, topic: qs.q.topic }); setTimeout(() => { if (this.phase === 'playing' && !p.alive && !p.question && this.players.has(p.id)) this.askRespawn(p); }, 2500); }
       }

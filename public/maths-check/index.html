@@ -108,6 +108,7 @@ th { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: v
 
 <div class="wrap" id="app"></div>
 
+<script src="/edu-tracker.js" data-child="Charlie" data-game="Charlie's Maths Check" data-subject="Maths"></script>
 <script>
 'use strict';
 // Maths question generator + answer checker.
@@ -508,7 +509,7 @@ function renderHome() {
 }
 
 function startTest() {
-  test = { qs: makePaper(), started: Date.now(), confirming: false };
+  test = { id: Date.now().toString(36), qs: makePaper(), started: Date.now(), confirming: false, focus: null };
   renderPaper();
   tick = setInterval(updateClock, 1000);
 }
@@ -532,6 +533,9 @@ function renderPaper() {
   app.innerHTML = html;
   app.querySelectorAll('.q input').forEach((inp) => {
     inp.addEventListener('input', () => { test.qs[+inp.dataset.i].given = inp.value; updateClock(); });
+    // time spent on each question = how long its answer box was in use
+    inp.addEventListener('focus', () => { test.focus = { i: +inp.dataset.i, t: Date.now() }; });
+    inp.addEventListener('blur', closeFocus);
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const next = document.getElementById('a' + (+inp.dataset.i + 1)); if (next) next.focus(); } });
   });
   document.getElementById('finish').addEventListener('click', askFinish);
@@ -550,9 +554,28 @@ function askFinish() {
   box.scrollIntoView({ block: 'center' });
 }
 
+function closeFocus() {
+  if (!test || !test.focus) return;
+  const q = test.qs[test.focus.i]; q.ms = (q.ms || 0) + Math.min(Date.now() - test.focus.t, 10 * 60 * 1000);
+  test.focus = null;
+}
+// Send answers to the parent dashboard. "partial" = the test was closed before it was finished, so only what was typed is sent.
+function reportTest(partial) {
+  if (!window.EduTracker || !test) return;
+  const open = test.focus ? test.focus.i : -1;
+  closeFocus();
+  test.qs.forEach((q, i) => {
+    if (partial && !q.given.trim()) return;
+    EduTracker.answer({ id: `${test.id}-${i}`, topic: q.topic, question: q.text, given: q.given.trim(), answer: q.display, ok: check(q, q.given), ms: q.ms || 0, level: 'Year 5 top-set test', partial });
+  });
+  if (partial && open >= 0) test.focus = { i: open, t: Date.now() };
+}
+if (window.EduTracker) EduTracker.beforeLeave(() => { if (test && !test.marked) reportTest(true); });
+
 function markTest() {
   clearInterval(tick);
   const ms = Date.now() - test.started;
+  reportTest(false); test.marked = true;
   for (const q of test.qs) q.ok = check(q, q.given);
   const right = test.qs.filter((q) => q.ok).length;
   const strands = STRANDS.map((st) => { const qs = test.qs.filter((q) => q.strand === st.name); return { name: st.name, right: qs.filter((q) => q.ok).length, total: qs.length }; });
