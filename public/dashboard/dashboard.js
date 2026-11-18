@@ -99,7 +99,7 @@
   }
   function answerRow(a, opts) {
     opts = opts || {};
-    var cls = a.skipped ? 'skip' : a.ok ? 'ok' : 'no';
+    var cls = a.skipped || a.uncounted ? 'skip' : a.ok ? 'ok' : 'no';
     var mark = a.skipped ? '–' : a.ok ? '✓' : '✗';
     var said = a.skipped ? 'Walked away without answering'
       : a.timeout ? 'Ran out of time'
@@ -115,6 +115,7 @@
     if (opts.game) bits.push(esc(a.game));
     if (a.partial) bits.push('test not finished');
     if (a.retry) bits.push('second try, not counted');
+    if (a.uncounted) bits.push(esc(a.uncounted) + ', not counted');
     return '<div class="ans ' + cls + '"><span class="mark" aria-hidden="true">' + mark + '</span><span class="q"><span class="sr">' + (a.skipped ? 'Skipped: ' : a.ok ? 'Right: ' : 'Wrong: ') + '</span>' + esc(a.q || '(question not recorded)') + '</span><span class="a">' + bits.join(' · ') + '</span></div>';
   }
 
@@ -164,7 +165,7 @@
     var perDay = t.daysPractised ? t.activeMs / t.daysPractised : 0;
     html += '<section class="kpis" aria-label="Summary">' +
       kpi('Time practised', S.duration(t.activeMs), t.sessions ? t.sessions + (t.sessions === 1 ? ' session' : ' sessions') + (state.range !== 'today' && t.daysPractised > 1 ? ' · about ' + S.duration(perDay) + ' a day' : '') : 'No practice ' + period) +
-      kpi('Questions answered', String(t.answered), t.answered ? t.right + ' right · ' + t.wrong + ' wrong' + (t.skipped ? ' · ' + t.skipped + ' skipped or second tries' : '') : '–') +
+      kpi('Questions answered', String(t.answered), t.answered ? t.right + ' right · ' + t.wrong + ' wrong' + (t.skipped ? ' · ' + t.skipped + ' not counted' : '') : '–') +
       kpi('Right first time', S.percent(t.acc), t.avgMs != null ? 'About ' + S.seconds(t.avgMs) + ' per question' : '–') +
       (state.range === 'today' ? kpi('Topics covered', String(sum.topics.length), sum.weak.length ? sum.weak.length + ' need practice' : 'None flagged')
         : kpi('Days practised', state.range === 'all' ? String(t.daysPractised) : t.daysPractised + ' of ' + t.spanDays, sum.weak.length ? sum.weak.length + (sum.weak.length === 1 ? ' topic needs practice' : ' topics need practice') : 'No weak topics flagged')) +

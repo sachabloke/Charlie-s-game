@@ -16,7 +16,7 @@
   function dayKey(t) { var d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function sessionMs(s) { return Math.max(0, s.activeMs != null ? s.activeMs : s.end - s.start); }
   // Only first tries are scored. Walking away from a sum, or a second go at the same question, is listed but not counted.
-  function counts(a) { return !a.skipped && !a.retry; }
+  function counts(a) { return !a.skipped && !a.retry && !a.uncounted; }
 
   // range: 'today' | '7' | '30' | 'all'
   function summarise(data, opts) {

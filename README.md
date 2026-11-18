@@ -38,6 +38,7 @@ What is connected:
 | Game | Who is recorded |
 |---|---|
 | **Charlie's Quest** (charlie-quest-2b7841.netlify.app) | Charlie. Quest, Dungeon, Test mode and Balloon Rescue. Daddy play is never sent. Linked by `public/links/charlie-quest.js` (two lines added to the game's pages; see the top of that file). |
+| **Dreamlands** (dreamlands-world.netlify.app) | Leo. Every answered challenge the game already logs. Daddy and the practice child are never sent. Linked by `public/links/dreamlands.js`. |
 | Maths Royale (`/`) | Whoever types a name starting with **Charlie** or **Leo** on the start screen. Friends and bots are never recorded. |
 | Charlie's English (`/english/`) | Charlie |
 | Charlie's Maths Check (`/maths-check/`) | Charlie (a test closed half way still sends the answers typed so far) |

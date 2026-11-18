@@ -143,7 +143,7 @@ class Tracker {
           subject: clean(e.subject, 20) || 'Maths', topic: clean(e.topic, 60) || 'Other', level: clean(e.level, 20),
           q: clean(e.question, 300), given: clean(e.given, 80), answer: clean(e.answer, 120),
           ok: e.ok === true, ms: Number.isFinite(e.ms) ? Math.min(30 * 60 * 1000, Math.max(0, Math.round(e.ms))) : null,
-          ...(e.timeout ? { timeout: true } : {}), ...(e.skipped ? { skipped: true } : {}), ...(e.partial ? { partial: true } : {}), ...(e.retry ? { retry: true } : {}),
+          ...(e.timeout ? { timeout: true } : {}), ...(e.skipped ? { skipped: true } : {}), ...(e.partial ? { partial: true } : {}), ...(e.retry ? { retry: true } : {}), ...(clean(e.uncounted, 30) ? { uncounted: clean(e.uncounted, 30) } : {}),
         };
         if (this.saveAnswer(s, a)) saved++;
       } else if (e.t === 'start' || e.t === 'ping') ended = false;
