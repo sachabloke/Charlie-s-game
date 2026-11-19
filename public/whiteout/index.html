@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<!--page-->
+<title>Whiteout</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;800&family=Caveat:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* One screen: the game fills it; everything else floats over the picture. A single night-time look by design. */
+:root {
+  color-scheme: dark;
+  --night: #05080e; --panel: rgba(8, 14, 24, 0.84); --line: rgba(190, 220, 245, 0.2);
+  --ink: #e8eef6; --dim: #93a4ba; --ice: #bfe0f5; --ember: #ff9a45; --beacon: #ff4632; --paper: #e9e2cc; --paper-ink: #2c2a24;
+  --display: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif; --body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; --hand: 'Caveat', 'Segoe Print', 'Comic Sans MS', cursive;
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px)); --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--night); color: var(--ink); font: 400 15px/1.45 var(--body); overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+#stage { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--night); }
+#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; outline: none; }
+button, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--ice); outline-offset: 3px; }
+
+/* ---------- title ---------- */
+#title { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 22px; padding-block: 28px max(34px, env(safe-area-inset-bottom, 0px)); padding-left: max(28px, env(safe-area-inset-left, 0px)); padding-right: max(28px, env(safe-area-inset-right, 0px));
+  background: linear-gradient(180deg, rgba(5, 8, 14, 0.25) 0%, rgba(5, 8, 14, 0) 34%, rgba(5, 8, 14, 0.72) 78%, rgba(5, 8, 14, 0.94) 100%); transition: opacity 0.9s ease; }
+#title.gone { opacity: 0; pointer-events: none; }
+.eyebrow { font: 500 15px/1 var(--display); letter-spacing: 0.42em; text-transform: uppercase; color: var(--ember); }
+h1 { margin: 0; font: 800 clamp(54px, 13vw, 168px)/0.86 var(--display); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink); text-shadow: 0 0 60px rgba(160, 205, 255, 0.35); }
+.lede { margin: 0; max-width: 46ch; color: var(--dim); font-size: 16px; text-wrap: balance; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 14px; }
+.btn { border: 1px solid var(--ice); background: var(--ice); color: #06101c; padding: 13px 30px; font: 800 20px/1 var(--display); letter-spacing: 0.2em; text-transform: uppercase; border-radius: 2px; }
+.btn.second { background: transparent; color: var(--ice); }
+.btn:active { transform: translateY(1px); }
+.field { display: inline-flex; align-items: center; gap: 8px; color: var(--dim); font-size: 13px; }
+.field select { background: rgba(8, 14, 24, 0.7); border: 1px solid var(--line); padding: 8px 10px; border-radius: 2px; color: var(--ink); }
+.keys { color: var(--dim); font-size: 13px; max-width: 70ch; }
+.keys b { color: var(--ink); font-weight: 600; }
+#loading { font: 500 16px/1 var(--display); letter-spacing: 0.3em; text-transform: uppercase; color: var(--dim); }
+
+/* ---------- in-game ---------- */
+#hud { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 1.2s ease; }
+body.playing #hud { opacity: 1; }
+body.ui-open #hud { opacity: 0.25; }
+#objective { position: absolute; top: max(16px, env(safe-area-inset-top, 0px)); left: var(--gutter-l); max-width: min(60vw, 420px); opacity: 0; transform: translateY(-6px); transition: opacity 0.5s, transform 0.5s; }
+#objective.on { opacity: 1; transform: none; }
+#objective .label, #warmHud .label, #notesHud .label { display: block; font: 500 11px/1 var(--display); letter-spacing: 0.34em; text-transform: uppercase; color: var(--ember); margin-bottom: 6px; }
+#objectiveText { font: 500 clamp(17px, 2.4vw, 22px)/1.15 var(--display); letter-spacing: 0.06em; text-shadow: 0 1px 10px #000; }
+#side { position: absolute; top: max(16px, env(safe-area-inset-top, 0px)); right: var(--gutter-r); display: flex; flex-direction: column; align-items: flex-end; gap: 14px; }
+#warmHud, #notesHud { opacity: 0; transition: opacity 0.8s; text-align: right; }
+#warmHud.on, #notesHud.on { opacity: 1; }
+#warmBar { width: min(34vw, 190px); height: 6px; background: rgba(190, 220, 245, 0.16); border-radius: 3px; overflow: hidden; }
+#warmFill { height: 100%; background: linear-gradient(90deg, var(--beacon), var(--ember) 45%, #ffd9a0); transform-origin: left center; transition: transform 0.2s linear; }
+#warmHud.low .label { color: var(--ice); animation: pulse 0.9s infinite alternate; }
+@keyframes pulse { to { opacity: 0.35; } }
+#noteCount { font: 500 18px/1 var(--display); letter-spacing: 0.1em; font-variant-numeric: tabular-nums; }
+#dot { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: rgba(232, 238, 246, 0.55); }
+#prompt { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 2px; opacity: 0; transition: opacity 0.2s; white-space: nowrap; }
+#prompt.on { opacity: 1; }
+#prompt kbd { font: 800 15px/1 var(--display); background: var(--ice); color: #06101c; padding: 5px 9px; border-radius: 2px; }
+#promptText { font: 500 17px/1 var(--display); letter-spacing: 0.08em; }
+body.touch #prompt { display: none; }
+#subs { position: absolute; left: 50%; bottom: max(15%, 92px); transform: translateX(-50%); width: min(86vw, 640px); text-align: center; font: 500 clamp(17px, 2.5vw, 23px)/1.3 var(--body); font-style: italic; color: var(--ink); text-shadow: 0 2px 14px #000, 0 0 3px #000; opacity: 0; transition: opacity 0.45s; text-wrap: balance; }
+#subs.on { opacity: 1; }
+#tip { position: absolute; left: 50%; top: max(150px, 24%); transform: translateX(-50%); width: max-content; max-width: 86vw; padding: 9px 16px; background: var(--panel); border-left: 3px solid var(--ember); font-size: 14px; opacity: 0; transition: opacity 0.6s; text-align: center; }
+#tip.on { opacity: 1; }
+/* touch controls */
+#touchUi { position: absolute; inset: 0; pointer-events: none; display: none; }
+body.touch.playing #touchUi { display: block; }
+#stick { position: absolute; width: 112px; height: 112px; margin: -56px; border-radius: 50%; border: 1px solid var(--line); background: rgba(190, 220, 245, 0.06); opacity: 0; transition: opacity 0.15s; }
+#stick.on { opacity: 1; }
+#stickKnob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px; border-radius: 50%; background: rgba(190, 220, 245, 0.35); }
+.tbtn { position: absolute; pointer-events: auto; border: 1px solid var(--line); background: var(--panel); border-radius: 50%; font: 800 14px/1.05 var(--display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); display: grid; place-items: center; text-align: center; }
+#btnUse { right: calc(var(--gutter-r) + 8px); bottom: calc(max(26px, env(safe-area-inset-bottom, 0px)) + 78px); width: 104px; height: 104px; background: var(--ice); color: #06101c; border-color: var(--ice); opacity: 0; transform: scale(0.85); transition: opacity 0.2s, transform 0.2s; padding: 8px; font-size: 15px; }
+#btnUse.on { opacity: 1; transform: none; }
+#btnTorch { right: calc(var(--gutter-r) + 126px); bottom: max(26px, env(safe-area-inset-bottom, 0px)); width: 66px; height: 66px; }
+#btnNotes { right: calc(var(--gutter-r) + 46px); bottom: max(26px, env(safe-area-inset-bottom, 0px)); width: 66px; height: 66px; }
+#btnPause { right: var(--gutter-r); top: calc(max(16px, env(safe-area-inset-top, 0px)) + 86px); width: 46px; height: 46px; font-size: 16px; letter-spacing: 0; }
+
+/* ---------- panels ---------- */
+.overlay { position: absolute; inset: 0; touch-action: pan-y; display: grid; place-items: center; padding-block: 20px; padding-left: var(--gutter-l); padding-right: var(--gutter-r); background: rgba(3, 6, 11, 0.62); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); overflow: auto; }
+.card { width: min(100%, 460px); background: var(--panel); border: 1px solid var(--line); padding: 26px 26px 22px; display: flex; flex-direction: column; gap: 16px; }
+.card h2 { margin: 0; font: 800 30px/1 var(--display); letter-spacing: 0.16em; text-transform: uppercase; }
+.card p { margin: 0; color: var(--dim); }
+#paper .sheet { max-height: 100%; box-sizing: border-box; width: min(100%, 440px); background: var(--paper); color: var(--paper-ink); padding: 30px 30px 22px; transform: rotate(-0.7deg); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7); display: flex; flex-direction: column; gap: 14px; background-image: linear-gradient(180deg, rgba(190, 220, 245, 0.35), rgba(190, 220, 245, 0) 30%), repeating-linear-gradient(180deg, transparent 0 31px, rgba(60, 80, 110, 0.13) 31px 32px); }
+#paperTitle { font: 500 12px/1 var(--display); letter-spacing: 0.3em; text-transform: uppercase; color: #7a6f55; }
+#paperText { font: 500 clamp(21px, 3.4vw, 25px)/1.28 var(--hand); white-space: pre-wrap; min-width: 0; min-height: 0; overflow-wrap: anywhere; overflow-y: auto; touch-action: pan-y; }
+#paper .btn { align-self: flex-end; background: var(--paper-ink); border-color: var(--paper-ink); color: var(--paper); font-size: 16px; padding: 10px 20px; }
+#kpDisplay { font: 800 44px/1 var(--display); letter-spacing: 0.2em; text-align: center; padding: 14px; background: #04090b; border: 1px solid var(--line); color: #7dffab; font-variant-numeric: tabular-nums; }
+#kpDisplay.bad { color: var(--beacon); animation: shake 0.35s; }
+#kpDisplay.ok { color: #fff; background: #0c3a22; }
+@keyframes shake { 25% { transform: translateX(-7px); } 75% { transform: translateX(7px); } }
+#kpKeys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+#kpKeys button { padding: 15px 0; font: 800 24px/1 var(--display); background: rgba(190, 220, 245, 0.08); border: 1px solid var(--line); border-radius: 2px; }
+#kpKeys button:active { background: var(--ice); color: #06101c; }
+#journalList { display: flex; flex-direction: column; gap: 8px; }
+.jitem { text-align: left; padding: 12px 14px; background: rgba(190, 220, 245, 0.07); border: 1px solid var(--line); border-radius: 2px; font: 700 22px/1.1 var(--hand); }
+.link { background: none; border: 0; color: var(--dim); text-decoration: underline; text-underline-offset: 3px; align-self: flex-start; padding: 4px 0; }
+#end { background: radial-gradient(ellipse at 50% 40%, #fff2dc 0%, #ffd9a6 55%, #f0b074 100%); color: #2b1c10; text-align: center; }
+#end .inner { display: flex; flex-direction: column; align-items: center; gap: 18px; max-width: 560px; }
+#end h2 { margin: 0; font: 800 clamp(40px, 9vw, 92px)/0.9 var(--display); letter-spacing: 0.14em; text-transform: uppercase; }
+#end p { margin: 0; font-size: 17px; text-wrap: balance; }
+#end .eyebrow { color: #a3411c; }
+#end .btn { background: #2b1c10; border-color: #2b1c10; color: #ffe9cc; }
+#endStats { font: 500 16px/1 var(--display); letter-spacing: 0.14em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+@media (max-height: 520px) { #paper .sheet { padding: 16px 22px 14px; gap: 8px; width: min(100%, 620px); } #paperText { font-size: 19px; line-height: 1.2; } h1 { font-size: clamp(44px, 16vh, 110px); } #title { gap: 12px; } .keys { display: none; } .card { padding: 16px 20px; gap: 10px; } #kpKeys button { padding: 9px 0; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+<!--/page-->
+</head>
+<body>
+<!--page-->
+<div id="stage">
+  <canvas id="view" tabindex="0" aria-label="Whiteout, a first-person game set in a frozen city"></canvas>
+
+  <div id="hud">
+    <div id="objective"><span class="label">Now</span><span id="objectiveText"></span></div>
+    <div id="side">
+      <div id="warmHud"><span class="label">Warmth</span><div id="warmBar"><div id="warmFill"></div></div></div>
+      <div id="notesHud"><span class="label">Notes</span><span id="noteCount">0 / 6</span></div>
+    </div>
+    <div id="dot"></div>
+    <div id="prompt"><kbd>E</kbd><span id="promptText"></span></div>
+    <div id="tip"></div>
+    <div id="subs"></div>
+    <div id="touchUi">
+      <div id="stick"><div id="stickKnob"></div></div>
+      <button id="btnUse" class="tbtn">Use</button>
+      <button id="btnTorch" class="tbtn">Torch</button>
+      <button id="btnNotes" class="tbtn">Notes</button>
+      <button id="btnPause" class="tbtn" aria-label="Pause">II</button>
+    </div>
+  </div>
+
+  <div id="title">
+    <div class="eyebrow">Chapter one · Awake</div>
+    <h1>Whiteout</h1>
+    <p class="lede">You wake in a frozen flat. The heating died on Day 41 and everyone has gone. Somewhere south, a red light is still blinking.</p>
+    <div id="loading">Freezing the city…</div>
+    <div id="titleButtons" hidden>
+      <div class="row">
+        <button id="continueBtn" class="btn" hidden>Continue</button>
+        <button id="playBtn" class="btn">Wake up</button>
+        <label class="field" for="qualitySel">Graphics
+          <select id="qualitySel"><option value="auto">Auto</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low (fastest)</option></select>
+        </label>
+      </div>
+    </div>
+    <div class="keys"><b>Keyboard:</b> W A S D move · mouse looks · <b>E</b> use · <b>F</b> torch · <b>N</b> notes · <b>Shift</b> run · <b>P</b> pause. <b>Tablet or phone:</b> left thumb moves, right thumb looks.</div>
+  </div>
+
+  <div id="paper" class="overlay" hidden>
+    <div class="sheet"><div id="paperTitle"></div><div id="paperText"></div><button id="paperClose" class="btn">Put away</button></div>
+  </div>
+  <div id="keypad" class="overlay" hidden>
+    <div class="card">
+      <h2>Office door</h2>
+      <div id="kpDisplay">_ _ _ _</div>
+      <div id="kpKeys">
+        <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+        <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="del" aria-label="Delete">⌫</button><button data-k="0">0</button><span></span>
+      </div>
+      <p id="kpHint"></p>
+      <button id="kpClose" class="link">Step back</button>
+    </div>
+  </div>
+  <div id="journal" class="overlay" hidden>
+    <div class="card"><h2>Notes</h2><p id="journalCount"></p><div id="journalList"></div><button id="journalClose" class="btn second">Close</button></div>
+  </div>
+  <div id="pause" class="overlay" hidden>
+    <div class="card">
+      <h2>Paused</h2>
+      <button id="resumeBtn" class="btn">Carry on</button>
+      <label class="field" for="qualitySel2">Graphics
+        <select id="qualitySel2"><option value="auto">Auto</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low (fastest)</option></select>
+      </label>
+      <button id="muteBtn" class="btn second">Sound: on</button>
+      <button id="restartBtn" class="link">Start the chapter again</button>
+    </div>
+  </div>
+  <div id="end" class="overlay" hidden>
+    <div class="inner">
+      <div class="eyebrow">End of chapter one</div>
+      <h2>You made it</h2>
+      <p>The gate was never locked. Inside there is warmth, and light, and the sound of voices.</p>
+      <div id="endStats"></div>
+      <button id="againBtn" class="btn">Play again</button>
+      <p>Chapter two: the Tower.</p>
+    </div>
+  </div>
+</div>
+<script type="module" src="js/main.js"></script>
+<!--/page-->
+</body>
+</html>

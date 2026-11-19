@@ -1,3 +1,33 @@
+# Whiteout (new game, first chapter)
+
+**Folder:** [`public/whiteout/`](public/whiteout/). Once this is on the live site it plays at **https://maths-royale.onrender.com/whiteout/**.
+
+A first-person game set in a frozen, abandoned city. You wake in an icy flat, find a torch, read the note on the door,
+get down the stairwell, open the caretaker's office (keypad), break the ice off the front door, then follow the red light
+down the dead avenue to the Tower gate. The cold drains your warmth outside; the fire barrels along the way warm you up.
+Six notes to find tell the story. About 10 minutes. It saves by itself (Continue on the title screen).
+
+- **Keyboard:** W A S D move, mouse looks, E use, F torch, N notes, Shift run, P pause.
+- **Tablet or phone:** left thumb moves, right thumb looks, buttons for Use / Torch / Notes.
+- **Graphics:** Auto / High / Medium / Low on the title screen and the pause menu; Auto steps down by itself if the game is choppy.
+
+How it is built (all in `public/whiteout/js/`, no build step, no picture files):
+
+| File | What it holds |
+|---|---|
+| `main.js` | the game: story steps, controls, warmth, saving, the picture each frame |
+| `world.js` | the block of flats (flat 34, corridor, stairwell, lobby, office) |
+| `city.js` | the street, avenue, plaza, gate and Tower; where the fires and the trail are |
+| `textures.js` | every surface and sign, painted in code |
+| `sky.js` | moon, stars, aurora, snowfall, flames, the searchlight |
+| `post.js` | glow, night colour and the frost that creeps over the screen (adapted from Lake Valley) |
+| `audio.js` | sound; the six recordings in `sounds/` are free (see `sounds/CREDITS.md`) |
+| `build.js` | helpers that merge the scenery into a few meshes and keep the collision lists |
+
+It has no maths questions and sends nothing to the parent dashboard yet.
+
+---
+
 # Maths Royale
 
 **Roblox version:** see the [`roblox/`](roblox/) folder for a full Roblox Studio game (open `MathsRoyale.rbxl`, press Publish).
