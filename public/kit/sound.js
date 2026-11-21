@@ -5,7 +5,7 @@ const DEFAULT = ['wind-open', 'step-stone', 'step-gravel', 'door', 'creak', 'dri
 export class Sound {
   constructor(files = DEFAULT) { this.files = files; this.ac = null; this.bufs = {}; this.ready = false; this.muted = false; this.loops = {}; }
   // Must be called from a tap or key press: browsers only allow sound after the player does something.
-  async start(base) {
+  async start(base = new URL('./sounds/', import.meta.url).href) {            // the recordings sit beside this file, wherever the game is hosted
     if (this.ac) { if (this.ac.state === 'suspended') this.ac.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     const ac = this.ac = new AC(); this.master = ac.createGain(); this.master.gain.value = this.muted ? 0 : 0.9; this.master.connect(ac.destination);

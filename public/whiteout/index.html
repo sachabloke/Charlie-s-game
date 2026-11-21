@@ -193,6 +193,16 @@ body.touch.playing #touchUi { display: block; }
     </div>
   </div>
 </div>
+<script>
+  // If the game cannot load, say so on the title screen instead of waiting for ever.
+  (function () {
+    var said = false;
+    function fail(what) { if (said) return; var l = document.getElementById('loading'); if (!l || l.hidden) return; said = true; l.textContent = 'The game could not start. ' + what; l.style.letterSpacing = '0.04em'; l.style.textTransform = 'none'; l.style.color = '#ff9a45'; }
+    window.addEventListener('error', function (e) { var t = e.target; if (t && t !== window && (t.src || t.href)) fail('A file did not load: ' + String(t.src || t.href).split('/').slice(-2).join('/')); else fail(String(e.message || 'Unknown error').slice(0, 160)); }, true);
+    window.addEventListener('unhandledrejection', function (e) { fail(String((e.reason && e.reason.message) || e.reason || 'Unknown error').slice(0, 160)); });
+    setTimeout(function () { fail('It is taking too long. Try reloading the page.'); }, 45000);
+  })();
+</script>
 <script type="module" src="js/main.js"></script>
 <!--/page-->
 </body>

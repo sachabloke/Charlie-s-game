@@ -214,7 +214,7 @@ document.addEventListener('pointerlockchange', () => { if (!document.pointerLock
 let lastLockAt = 0;
 const KEYMAP = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b', KeyA: 'l', ArrowLeft: 'l', KeyD: 'r', ArrowRight: 'r', ShiftLeft: 'run', ShiftRight: 'run' };
 window.addEventListener('keydown', (e) => {
-  if (e.repeat) return; sound.start('../kit/sounds/');
+  if (e.repeat) return; sound.start();
   if (S.mode === 'ui') {
     if (S.ui === 'keypad') { if (/^Digit\d$|^Numpad\d$/.test(e.code)) kpPress(e.code.slice(-1)); else if (e.code === 'Backspace') kpPress('del'); }
     if (e.code === 'Escape' || (e.code === 'KeyE' && S.ui === 'paper') || (e.code === 'Enter' && S.ui !== 'keypad') || (e.code === 'KeyN' && S.ui === 'journal') || (e.code === 'KeyP' && S.ui === 'pause')) { e.preventDefault(); closeUi(); }
@@ -232,7 +232,7 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = false; });
 window.addEventListener('blur', () => { keys = {}; });
 document.addEventListener('visibilitychange', () => { if (document.hidden && S.mode === 'play') openPause(); });
-canvas.addEventListener('mousedown', () => { sound.start('../kit/sounds/'); if (S.mode !== 'play' || touch.on) return; if (dragLook) dragging = true; else if (!document.pointerLockElement) lockPointer(); });
+canvas.addEventListener('mousedown', () => { sound.start(); if (S.mode !== 'play' || touch.on) return; if (dragLook) dragging = true; else if (!document.pointerLockElement) lockPointer(); });
 window.addEventListener('mouseup', () => { dragging = false; });
 window.addEventListener('mousemove', (e) => { if (S.mode !== 'play') return; if (document.pointerLockElement === canvas || (dragLook && dragging)) look(e.movementX * 0.0023, e.movementY * 0.0023); });
 function look(dx, dy) { S.yaw -= dx; S.pitch = clamp(S.pitch - dy, -1.35, 1.35); }
@@ -240,7 +240,7 @@ function toggleTorch() { if (!S.flags.torch) return; S.flags.torchOn = !S.flags.
 const STICK = 52;
 window.addEventListener('touchstart', () => { if (!touch.on) { touch.on = true; document.body.classList.add('touch'); } }, { passive: true, capture: true });
 canvas.addEventListener('touchstart', (e) => {
-  sound.start('../kit/sounds/');
+  sound.start();
   for (const t of e.changedTouches) { const st = { id: t.identifier, sx: t.clientX, sy: t.clientY, x: t.clientX, y: t.clientY }; if (t.clientX < window.innerWidth * 0.45) { if (!touch.move) { touch.move = st; const k = $('stick'); k.style.left = t.clientX + 'px'; k.style.top = t.clientY + 'px'; k.classList.add('on'); } } else if (!touch.look) touch.look = st; }
   e.preventDefault();
 }, { passive: false });
@@ -253,7 +253,7 @@ canvas.addEventListener('touchmove', (e) => {
 }, { passive: false });
 const touchEnd = (e) => { for (const t of e.changedTouches) { if (touch.move && touch.move.id === t.identifier) { touch.move = null; $('stick').classList.remove('on'); $('stickKnob').style.transform = ''; } if (touch.look && touch.look.id === t.identifier) touch.look = null; } };
 canvas.addEventListener('touchend', touchEnd); canvas.addEventListener('touchcancel', touchEnd);
-const tap = (id, fn) => $(id).addEventListener('click', (e) => { e.preventDefault(); sound.start('../kit/sounds/'); fn(e); });
+const tap = (id, fn) => $(id).addEventListener('click', (e) => { e.preventDefault(); sound.start(); fn(e); });
 tap('btnUse', () => interact()); tap('btnTorch', toggleTorch); tap('btnNotes', () => { if (S.mode === 'play') openJournal(); }); tap('btnPause', () => { if (S.mode === 'play') openPause(); });
 tap('paperClose', closeUi); tap('kpClose', closeUi); tap('journalClose', closeUi); tap('resumeBtn', closeUi);
 document.querySelectorAll('#kpKeys button').forEach((b) => b.addEventListener('click', () => kpPress(b.dataset.k)));
@@ -358,7 +358,7 @@ function continueGame(d) {
 }
 function hideTitle() { $('title').classList.add('gone'); setTimeout(() => { $('title').hidden = true; }, 900); }
 dyn.exitIce.children.forEach((m) => { m.userData.home = m.position.clone(); });
-tap('playBtn', () => { sound.start('../kit/sounds/'); newGame(); });
+tap('playBtn', () => { sound.start(); newGame(); });
 tap('continueBtn', () => { const d = loadSave(); if (d) continueGame(d); });
 tap('againBtn', () => { store.del('wo_save'); $('end').hidden = true; newGame(); });
 { const d = loadSave(); $('continueBtn').hidden = !d; if (d) { $('playBtn').textContent = 'New game'; $('playBtn').classList.add('second'); } $('qualitySel').value = qualityMode; }
