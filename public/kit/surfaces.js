@@ -1,9 +1,9 @@
-// Every surface in the game is painted here in code (no picture files to download): concrete, wallpaper, snow, ice,
-// frosted glass, building fronts, signs. Returns the materials the world is built from.
+// KIT: surfaces painted in code (no picture files to download): concrete, wallpaper, wood, tiles, snow, ice, frosted glass,
+// building fronts. makeMaterials() returns a ready set; a game can also call the painters one by one. Each gets relief (a bump map) too.
 import * as THREE from './three.js';
 import { hash2, rng } from './build.js';
 
-const cv = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+export const cv = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 const sm = (t) => t * t * (3 - 2 * t);
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const sstep = (a, b, v) => sm(clamp((v - a) / (b - a)));
@@ -16,19 +16,19 @@ function pn(x, y, px, py, seed) {
   const a = hash2(X0 + o, Y0 - o), b = hash2(X1 + o, Y0 - o), c = hash2(X0 + o, Y1 - o), d = hash2(X1 + o, Y1 - o);
   return a + (b - a) * xf + (c - a) * yf + (a - b - c + d) * xf * yf;
 }
-function tf(u, v, px, py, oct = 4, seed = 0) { let s = 0, a = 0.5, n = 0; for (let i = 0; i < oct; i++) { s += a * pn(u * px, v * py, px, py, seed + i); n += a; px *= 2; py *= 2; a *= 0.5; } return s / n; }
+export function tf(u, v, px, py, oct = 4, seed = 0) { let s = 0, a = 0.5, n = 0; for (let i = 0; i < oct; i++) { s += a * pn(u * px, v * py, px, py, seed + i); n += a; px *= 2; py *= 2; a *= 0.5; } return s / n; }
 
-function pix(w, h, fn) {
+export function pix(w, h, fn) {
   const c = cv(w, h), g = c.getContext('2d'), im = g.createImageData(w, h), d = im.data; let i = 0; const out = [0, 0, 0, 255];
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { out[3] = 255; fn(x / w, y / h, out); d[i++] = out[0]; d[i++] = out[1]; d[i++] = out[2]; d[i++] = out[3]; }
   g.putImageData(im, 0, 0); return c;
 }
-function tex(c, { srgb = true, repeat = true, aniso = 4 } = {}) {
+export function tex(c, { srgb = true, repeat = true, aniso = 4 } = {}) {
   const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace;
   if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = aniso; return t;
 }
 // Height field -> normal map.
-function normalMap(size, hf, strength) {
+export function normalMap(size, hf, strength) {
   const H = new Float32Array(size * size);
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) H[y * size + x] = hf(x / size, y / size);
   const at = (x, y) => H[((y + size) % size) * size + ((x + size) % size)];
@@ -40,8 +40,17 @@ function normalMap(size, hf, strength) {
   g.putImageData(im, 0, 0); return c;
 }
 
+// Relief from a painted picture: dark lines (joints, cracks, gaps between planks) become grooves, pale patches stand proud.
+export function reliefFrom(canvas, strength = 2.2) {
+  const w = canvas.width, h = canvas.height, src = canvas.getContext('2d').getImageData(0, 0, w, h).data, H = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) H[i] = (src[i * 4] * 0.3 + src[i * 4 + 1] * 0.59 + src[i * 4 + 2] * 0.11) / 255;
+  const at = (x, y) => H[((y + h) % h) * w + ((x + w) % w)], c = cv(w, h), g = c.getContext('2d'), im = g.createImageData(w, h), d = im.data; let k = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const nx = (at(x - 1, y) - at(x + 1, y)) * strength, ny = (at(x, y - 1) - at(x, y + 1)) * strength, l = Math.hypot(nx, ny, 1);
+    d[k++] = (nx / l * 0.5 + 0.5) * 255; d[k++] = (-ny / l * 0.5 + 0.5) * 255; d[k++] = (1 / l * 0.5 + 0.5) * 255; d[k++] = 255; }
+  g.putImageData(im, 0, 0); return c;
+}
 // ---------------------------------------------------------------- surfaces
-function concrete(seed, base = 112, frost = 0.5) {
+export function concrete(seed, base = 112, frost = 0.5) {
   return pix(512, 512, (u, v, o) => {
     const big = tf(u, v, 4, 4, 5, seed), fine = tf(u, v, 48, 48, 2, seed + 9), streak = tf(u, v, 28, 2, 3, seed + 3);
     let c = base + 46 * (big - 0.5) + 26 * (fine - 0.5) - 34 * Math.max(0, streak - 0.55);
@@ -51,7 +60,7 @@ function concrete(seed, base = 112, frost = 0.5) {
     o[0] = mix(c * 0.94, 214, f); o[1] = mix(c * 0.985, 228, f); o[2] = mix(c * 1.05, 242, f);
   });
 }
-function wallpaper() {
+export function wallpaper() {
   return pix(512, 512, (u, v, o) => {
     const stripe = Math.sin(u * Math.PI * 2 * 12), dot = Math.sin(u * Math.PI * 48) * Math.sin(v * Math.PI * 48);
     const dirt = tf(u, v, 4, 4, 4, 1), damp = tf(u, v, 9, 2, 3, 2), fine = tf(u, v, 64, 64, 2, 3);
@@ -63,7 +72,7 @@ function wallpaper() {
   });
 }
 // Two-tone painted wall: one repeat = one storey (bottom of the picture is the floor).
-function twoTone(lower, upper, seed, tiles = false) {
+export function twoTone(lower, upper, seed, tiles = false) {
   return pix(512, 512, (u, v, o) => {
     const h = 1 - v, dirt = tf(u, v, 5, 5, 4, seed), fine = tf(u, v, 60, 60, 2, seed + 1), drip = tf(u, v, 30, 2, 3, seed + 2);
     const low = h < 0.42, c = low ? lower : upper; let k = 0.74 + 0.42 * dirt + 0.12 * (fine - 0.5) - 0.25 * Math.max(0, drip - 0.6);
@@ -75,14 +84,14 @@ function twoTone(lower, upper, seed, tiles = false) {
     o[0] = mix(c[0] * k, 214, fr); o[1] = mix(c[1] * k, 228, fr); o[2] = mix(c[2] * k, 242, fr);
   });
 }
-function ceilingTex() {
+export function ceilingTex() {
   return pix(256, 256, (u, v, o) => {
     const dirt = tf(u, v, 4, 4, 4, 11), crack = Math.abs(tf(u, v, 7, 7, 3, 12) - 0.5), damp = tf(u, v, 3, 3, 3, 13);
     let c = 150 + 30 * (dirt - 0.5) - 45 * sstep(0.6, 0.8, damp); if (crack < 0.006) c -= 40;
     o[0] = c; o[1] = c; o[2] = c * 1.02;
   });
 }
-function woodFloor() {
+export function woodFloor() {
   return pix(512, 512, (u, v, o) => {
     const n = 10, pi = Math.floor(u * n), pu = u * n - pi, ph = hash2(pi, 77), vv = (v + ph) % 1;
     const grain = tf(u * 1, vv, 40, 3, 3, 20 + pi % 5), tone = 0.75 + 0.4 * ph + 0.25 * (grain - 0.5);
@@ -93,7 +102,7 @@ function woodFloor() {
     const fr = 0.42 * sstep(0.5, 0.95, tf(u, v, 2, 2, 5, 23)); o[0] = mix(r, 200, fr); o[1] = mix(g, 214, fr); o[2] = mix(b, 232, fr);
   });
 }
-function lino(seed, base) {
+export function lino(seed, base) {
   return pix(256, 256, (u, v, o) => {
     const sp = tf(u, v, 90, 90, 1, seed), dirt = tf(u, v, 5, 5, 4, seed + 1), scuff = tf(u, v, 3, 20, 3, seed + 2);
     let k = 0.7 + 0.45 * dirt + (sp > 0.7 ? 0.12 : 0) - 0.2 * Math.max(0, scuff - 0.6);
@@ -101,7 +110,7 @@ function lino(seed, base) {
     const fr = 0.4 * sstep(0.5, 0.95, tf(u, v, 2, 2, 5, seed + 4)); o[0] = mix(base[0] * k, 200, fr); o[1] = mix(base[1] * k, 214, fr); o[2] = mix(base[2] * k, 232, fr);
   });
 }
-function tilesTex() {
+export function tilesTex() {
   return pix(512, 512, (u, v, o) => {
     const n = 4, tx = Math.floor(u * n), ty = Math.floor(v * n), fx = u * n - tx, fy = v * n - ty, dark = (tx + ty) % 2;
     const dirt = tf(u, v, 6, 6, 4, 31), crack = Math.abs(tf(u, v, 5, 5, 3, 32) - 0.5), chip = hash2(tx, ty + 9);
@@ -111,7 +120,7 @@ function tilesTex() {
     const fr = 0.42 * sstep(0.5, 0.95, tf(u, v, 2, 2, 5, 33)); o[0] = mix(c[0] * k, 212, fr); o[1] = mix(c[1] * k, 226, fr); o[2] = mix(c[2] * k, 242, fr);
   });
 }
-function painted(rgb, rust, seed, size = 256) {
+export function painted(rgb, rust, seed, size = 256) {
   return pix(size, size, (u, v, o) => {
     const n = tf(u, v, 6, 6, 4, seed), fine = tf(u, v, 50, 50, 2, seed + 1), ru = sstep(1 - rust, 1 - rust + 0.12, tf(u, v, 8, 8, 4, seed + 2) * 0.8 + fine * 0.2);
     const k = 0.75 + 0.4 * n; let r = rgb[0] * k, g = rgb[1] * k, b = rgb[2] * k;
@@ -119,25 +128,25 @@ function painted(rgb, rust, seed, size = 256) {
     const fr = 0.45 * sstep(0.6, 0.85, tf(u, v, 5, 5, 4, seed + 3)); o[0] = mix(r, 212, fr); o[1] = mix(g, 226, fr); o[2] = mix(b, 242, fr);
   });
 }
-function fabric(rgb, seed) {
+export function fabric(rgb, seed) {
   return pix(128, 128, (u, v, o) => {
     const w = ((Math.floor(u * 64) + Math.floor(v * 64)) % 2 ? 1 : 0.86), n = tf(u, v, 4, 4, 4, seed);
     const k = w * (0.7 + 0.5 * n); o[0] = rgb[0] * k; o[1] = rgb[1] * k; o[2] = rgb[2] * k;
   });
 }
-function woodTex(rgb, seed) {
+export function woodTex(rgb, seed) {
   return pix(256, 256, (u, v, o) => {
     const grain = tf(u, v, 3, 44, 4, seed), ring = Math.sin((grain * 6 + u * 2) * Math.PI * 2) * 0.5 + 0.5, dirt = tf(u, v, 5, 5, 3, seed + 1);
     const k = 0.62 + 0.3 * ring + 0.3 * (dirt - 0.5); o[0] = rgb[0] * k; o[1] = rgb[1] * k; o[2] = rgb[2] * k;
   });
 }
-function snowColor() {
+export function snowColor() {
   return pix(256, 256, (u, v, o) => {
     const n = tf(u, v, 5, 5, 4, 41), fine = tf(u, v, 70, 70, 2, 42), k = 0.9 + 0.1 * n + 0.04 * (fine - 0.5);
     o[0] = 228 * k; o[1] = 236 * k; o[2] = 250 * k;
   });
 }
-function iceTex() {
+export function iceTex() {
   return pix(256, 256, (u, v, o) => {
     const n = tf(u, v, 4, 4, 4, 51), crack = Math.abs(tf(u, v, 6, 6, 3, 52) - 0.5), crack2 = Math.abs(tf(u, v, 14, 14, 2, 53) - 0.5), bub = tf(u, v, 60, 60, 1, 54);
     let k = 0.8 + 0.35 * n, w = (crack < 0.008 ? 0.8 : 0) + (crack2 < 0.006 ? 0.45 : 0) + (bub > 0.84 ? 0.35 : 0);
@@ -145,7 +154,7 @@ function iceTex() {
   });
 }
 // Window glass with frost ferns creeping in from the edges; alpha is how much it hides.
-function frostGlass(seed, clear = 0.5) {
+export function frostGlass(seed, clear = 0.5) {
   return pix(256, 256, (u, v, o) => {
     const e = Math.min(u, 1 - u, v * 1.3, (1 - v) * 0.8), ridged = 1 - Math.abs(2 * tf(u, v, 10, 10, 4, seed) - 1), fern = Math.pow(ridged, 3);
     const blot = tf(u, v, 3, 3, 3, seed + 4), f = clamp(1.25 - e * (2.2 + clear * 5) + (blot - 0.5) * 1.4);
@@ -155,7 +164,7 @@ function frostGlass(seed, clear = 0.5) {
 }
 
 // ---------------------------------------------------------------- building fronts
-function facade(seed, tint) {
+export function facade(seed, tint) {
   const base = concrete(60 + seed, 128 + seed * 7 % 20, 0.3), c = cv(512, 512), g = c.getContext('2d'), R = rng(1000 + seed * 77);
   g.drawImage(base, 0, 0); g.globalCompositeOperation = 'multiply'; g.fillStyle = tint; g.fillRect(0, 0, 512, 512); g.globalCompositeOperation = 'source-over';
   const W = 128, H = 128;
@@ -191,7 +200,7 @@ function facade(seed, tint) {
   return c;
 }
 const SHOPS = ['BAKERY', 'PHARMACY', 'BOOKS', 'CAFÉ NORD', 'METRO', 'TAILOR', 'HARDWARE', 'CINEMA'];
-function shopfront(seed) {
+export function shopfront(seed) {
   const c = cv(1024, 256), g = c.getContext('2d'), R = rng(5000 + seed * 13);
   g.drawImage(concrete(80 + seed, 78, 0.3), 0, 0, 1024, 256);
   for (let b = 0; b < 4; b++) {
@@ -219,126 +228,26 @@ function shopfront(seed) {
   return c;
 }
 
-// ---------------------------------------------------------------- signs and posters, all on one sheet
-function makeAtlas() {
-  const W = 2048, H = 1024, c = cv(W, H), g = c.getContext('2d'), rects = {}; let x = 0, y = 0, row = 0;
-  const add = (name, w, h, draw) => {
-    if (x + w + 4 > W) { x = 0; y += row + 4; row = 0; }
-    g.save(); g.translate(x, y); g.beginPath(); g.rect(0, 0, w, h); g.clip(); draw(g, w, h); g.restore();
-    rects[name] = [x / W, 1 - (y + h) / H, (x + w) / W, 1 - y / H]; x += w + 4; row = Math.max(row, h);
-  };
-  const F = (px, f = 'Impact, "Arial Narrow", Arial, sans-serif') => `bold ${px}px ${f}`;
-  const grime = (g, w, h, a = 0.25, n = 40) => { for (let i = 0; i < n; i++) { g.fillStyle = `rgba(${20 + Math.random() * 30 | 0},${20 + Math.random() * 30 | 0},${24 + Math.random() * 30 | 0},${Math.random() * a})`; g.beginPath(); g.arc(Math.random() * w, Math.random() * h, 4 + Math.random() * 30, 0, 7); g.fill(); } };
-  const frostEdge = (g, w, h, a = 0.5) => { const gr = g.createLinearGradient(0, h * 0.55, 0, h); gr.addColorStop(0, 'rgba(220,235,250,0)'); gr.addColorStop(1, `rgba(220,235,250,${a})`); g.fillStyle = gr; g.fillRect(0, 0, w, h); };
-  const text = (g, s, x, y, font, col, align = 'center') => { g.font = font; g.fillStyle = col; g.textAlign = align; g.textBaseline = 'middle'; g.fillText(s, x, y); };
-
-  add('evac', 300, 420, (g, w, h) => {
-    g.fillStyle = '#d9d2bd'; g.fillRect(0, 0, w, h); g.fillStyle = '#a3261c'; g.fillRect(0, 0, w, 78);
-    text(g, 'EVACUATION', w / 2, 30, F(40), '#f1ead8'); text(g, 'ORDER 41', w / 2, 62, F(22), '#f1ead8');
-    text(g, 'ALL RESIDENTS', w / 2, 116, F(30), '#22201c'); text(g, 'OF SECTOR 7', w / 2, 150, F(30), '#22201c');
-    text(g, 'REPORT TO', w / 2, 196, F(24), '#22201c'); text(g, 'THE TOWER', w / 2, 240, F(54), '#a3261c');
-    g.strokeStyle = '#22201c'; g.lineWidth = 6; g.beginPath(); g.moveTo(w / 2, 280); g.lineTo(w / 2, 340); g.moveTo(w / 2 - 22, 318); g.lineTo(w / 2, 342); g.lineTo(w / 2 + 22, 318); g.stroke();
-    text(g, 'FOLLOW THE RED LIGHT', w / 2, 372, F(24), '#22201c'); text(g, 'Take only what you can carry.', w / 2, 400, 'italic 15px Georgia, serif', '#3a352c');
-    grime(g, w, h, 0.18); frostEdge(g, w, h, 0.35);
-  });
-  add('billboard', 640, 320, (g, w, h) => {
-    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#27405f'); gr.addColorStop(1, '#132033'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
-    g.fillStyle = '#e8b04a'; g.beginPath(); g.arc(w * 0.8, h * 0.42, 70, 0, 7); g.fill(); g.fillStyle = '#132033'; g.beginPath(); g.arc(w * 0.8, h * 0.42, 52, 0, 7); g.fill();
-    g.fillStyle = '#e8b04a'; g.fillRect(w * 0.8 - 6, h * 0.42 - 40, 12, 80);
-    text(g, 'STAY WARM.', 40, 96, F(74), '#e9eef5', 'left'); text(g, 'STAY TOGETHER.', 40, 176, F(74), '#e9eef5', 'left');
-    text(g, 'THE TOWER HAS LIGHT FOR EVERYONE', 42, 250, F(26), '#e8b04a', 'left'); text(g, 'CITY COUNCIL  ·  WINTER EMERGENCY', 42, 286, F(18), '#8fa4bf', 'left');
-    grime(g, w, h, 0.22, 70); frostEdge(g, w, h, 0.5);
-    g.fillStyle = '#132033'; g.beginPath(); g.moveTo(w, 0); g.lineTo(w - 120, 0); g.lineTo(w - 60, 46); g.lineTo(w, 110); g.fill();      // a torn corner
-  });
-  add('gate', 768, 150, (g, w, h) => {
-    g.fillStyle = '#20252d'; g.fillRect(0, 0, w, h); g.strokeStyle = '#d7b24a'; g.lineWidth = 6; g.strokeRect(8, 8, w - 16, h - 16);
-    text(g, 'SECTOR 7  ·  TOWER DISTRICT', w / 2, 58, F(52), '#e9eef5'); text(g, 'SHELTER  ·  WARMTH  ·  LIGHT', w / 2, 112, F(30), '#d7b24a'); grime(g, w, h, 0.2, 50); frostEdge(g, w, h, 0.4);
-  });
-  add('graffiti', 560, 190, (g, w, h) => {
-    g.clearRect(0, 0, w, h); g.font = 'bold 62px "Comic Sans MS", "Marker Felt", "Segoe Print", cursive'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.strokeStyle = 'rgba(232,176,74,0.9)'; g.lineWidth = 3; g.fillStyle = 'rgba(232,176,74,0.92)';
-    g.fillText('FOLLOW THE LIGHT', w / 2, 62); g.lineWidth = 12; g.lineCap = 'round'; g.beginPath(); g.moveTo(w / 2, 104); g.lineTo(w / 2, 170); g.moveTo(w / 2 - 28, 142); g.lineTo(w / 2, 174); g.lineTo(w / 2 + 28, 142); g.stroke();
-  });
-  for (const [n, s] of [['fl2', '2'], ['fl1', '1'], ['flG', 'G']]) add(n, 128, 128, (g, w, h) => { g.clearRect(0, 0, w, h); text(g, s, w / 2, h / 2 + 6, F(120), 'rgba(28,30,34,0.85)'); });
-  for (const n of ['31', '32', '33', '34', '35']) add('d' + n, 140, 300, (g, w, h) => {
-    g.drawImage(woodTex([120, 84, 54], 70 + +n), 0, 0, w, h); g.strokeStyle = 'rgba(0,0,0,0.45)'; g.lineWidth = 4; g.strokeRect(14, 16, w - 28, 118); g.strokeRect(14, 150, w - 28, 134);
-    g.fillStyle = '#b9a35a'; g.fillRect(w / 2 - 20, 40, 40, 26); text(g, n, w / 2, 54, F(20), '#1d1a12'); g.fillStyle = '#8e8a80'; g.fillRect(w - 30, 150, 14, 8);
-    frostEdge(g, w, h, 0.45);
-  });
-  add('mailboxes', 320, 256, (g, w, h) => {
-    g.fillStyle = '#4b5560'; g.fillRect(0, 0, w, h);
-    for (let r = 0; r < 4; r++) for (let q = 0; q < 5; q++) { const x = q * 64 + 4, y = r * 64 + 4; g.fillStyle = (r * 5 + q) % 7 === 3 ? '#161a1f' : '#5f6b78'; g.fillRect(x, y, 56, 56); g.fillStyle = '#20252b'; g.fillRect(x + 8, y + 12, 40, 5); g.fillStyle = '#c8cdd2'; g.fillRect(x + 16, y + 30, 24, 12); text(g, String(11 + r * 5 + q), x + 28, y + 37, F(11), '#22262b'); }
-    grime(g, w, h, 0.2); frostEdge(g, w, h, 0.4);
-  });
-  add('drawing', 220, 170, (g, w, h) => {
-    g.fillStyle = '#efe9d8'; g.fillRect(0, 0, w, h); g.lineWidth = 5; g.lineCap = 'round';
-    g.strokeStyle = '#e0a020'; g.beginPath(); g.arc(170, 46, 22, 0, 7); g.stroke(); for (let i = 0; i < 8; i++) { const a = i / 8 * 6.283; g.beginPath(); g.moveTo(170 + Math.cos(a) * 30, 46 + Math.sin(a) * 30); g.lineTo(170 + Math.cos(a) * 40, 46 + Math.sin(a) * 40); g.stroke(); }
-    g.strokeStyle = '#3d6fb3'; g.strokeRect(34, 80, 60, 56); g.beginPath(); g.moveTo(28, 82); g.lineTo(64, 50); g.lineTo(100, 82); g.stroke();
-    g.strokeStyle = '#b3423d'; for (const x of [124, 150]) { g.beginPath(); g.arc(x, 104, 7, 0, 7); g.moveTo(x, 111); g.lineTo(x, 132); g.moveTo(x - 9, 120); g.lineTo(x + 9, 120); g.moveTo(x, 132); g.lineTo(x - 7, 146); g.moveTo(x, 132); g.lineTo(x + 7, 146); g.stroke(); }
-    g.strokeStyle = '#4c9a4c'; g.beginPath(); g.moveTo(10, 150); g.lineTo(210, 150); g.stroke(); text(g, 'me and Ana', 62, 160, 'bold 13px "Comic Sans MS", cursive', '#444');
-  });
-  add('calendar', 180, 230, (g, w, h) => {
-    g.fillStyle = '#e4dfd0'; g.fillRect(0, 0, w, h); g.fillStyle = '#27405f'; g.fillRect(0, 0, w, 50); text(g, 'THE LONG NIGHT', w / 2, 26, F(22), '#e4dfd0');
-    text(g, 'DAY', w / 2, 84, F(28), '#333'); text(g, '41', w / 2, 150, F(96), '#a3261c');
-    g.strokeStyle = '#a3261c'; g.lineWidth = 3; for (let i = 0; i < 8; i++) { g.beginPath(); g.moveTo(16 + i * 20, 200); g.lineTo(26 + i * 20, 218); g.stroke(); }
-    frostEdge(g, w, h, 0.3);
-  });
-  add('news', 300, 200, (g, w, h) => {
-    g.fillStyle = '#d6d0c0'; g.fillRect(0, 0, w, h); text(g, 'THE DAILY SENTINEL', w / 2, 24, 'bold 24px Georgia, serif', '#1c1c1c'); g.fillStyle = '#1c1c1c'; g.fillRect(10, 40, w - 20, 3);
-    text(g, 'SUN FAILS TO RISE', w / 2, 76, F(40), '#1c1c1c'); text(g, 'FOR TWELFTH DAY', w / 2, 116, F(40), '#1c1c1c');
-    text(g, 'Council opens the Tower to all', w / 2, 150, 'italic 17px Georgia, serif', '#333'); g.fillStyle = '#8a8578'; for (let i = 0; i < 4; i++) g.fillRect(14, 166 + i * 8, w - 28 - (i === 3 ? 90 : 0), 3);
-    frostEdge(g, w, h, 0.45);
-  });
-  add('quarantine', 360, 180, (g, w, h) => {
-    g.fillStyle = '#d7b24a'; g.fillRect(0, 0, w, h); g.fillStyle = '#1b1b1b'; for (let i = -4; i < 12; i++) { g.beginPath(); g.moveTo(i * 44, 0); g.lineTo(i * 44 + 22, 0); g.lineTo(i * 44 + 22 - 30, 30); g.lineTo(i * 44 - 30, 30); g.fill(); g.beginPath(); g.moveTo(i * 44, h - 30); g.lineTo(i * 44 + 22, h - 30); g.lineTo(i * 44 + 22 - 30, h); g.lineTo(i * 44 - 30, h); g.fill(); }
-    text(g, 'ROAD CLOSED', w / 2, 74, F(56), '#1b1b1b'); text(g, 'ICE BEYOND THIS POINT', w / 2, 124, F(26), '#1b1b1b'); grime(g, w, h, 0.2); frostEdge(g, w, h, 0.4);
-  });
-  add('checkpoint', 420, 130, (g, w, h) => {
-    g.fillStyle = '#e4e0d2'; g.fillRect(0, 0, w, h); g.fillStyle = '#a3261c'; g.fillRect(0, 0, 14, h); g.fillRect(w - 14, 0, 14, h);
-    text(g, 'CHECKPOINT 7', w / 2, 46, F(52), '#20252d'); text(g, 'TOWER 300 m  ↑', w / 2, 98, F(30), '#a3261c'); grime(g, w, h, 0.2); frostEdge(g, w, h, 0.4);
-  });
-  add('busdest', 300, 72, (g, w, h) => { g.fillStyle = '#0c0d0f'; g.fillRect(0, 0, w, h); text(g, '7   THE TOWER', w / 2, h / 2 + 2, F(44, '"Courier New", monospace'), '#d79a2a'); });
-  add('keypad', 96, 140, (g, w, h) => {
-    g.fillStyle = '#2b2f36'; g.fillRect(0, 0, w, h); g.fillStyle = '#0b1410'; g.fillRect(10, 8, w - 20, 24);
-    for (let i = 0; i < 12; i++) { const x = 12 + (i % 3) * 26, y = 40 + (i / 3 | 0) * 24; g.fillStyle = '#596270'; g.fillRect(x, y, 20, 18); text(g, '123456789*0#'[i], x + 10, y + 10, F(13), '#e8edf2'); }
-  });
-  add('radio', 150, 90, (g, w, h) => {
-    g.fillStyle = '#3b3229'; g.fillRect(0, 0, w, h); g.fillStyle = '#16130f'; g.fillRect(8, 10, 74, 70); g.fillStyle = '#2a251e'; for (let y = 14; y < 78; y += 6) g.fillRect(10, y, 70, 2);
-    g.fillStyle = '#d9cfae'; g.fillRect(90, 12, 52, 26); g.fillStyle = '#a3261c'; g.fillRect(122, 12, 2, 26); g.fillStyle = '#8e8a80'; g.beginPath(); g.arc(102, 62, 10, 0, 7); g.arc(130, 62, 10, 0, 7); g.fill();
-  });
-  add('clock', 128, 128, (g, w, h) => {
-    g.clearRect(0, 0, w, h); g.fillStyle = '#d9d6cc'; g.beginPath(); g.arc(64, 64, 60, 0, 7); g.fill(); g.strokeStyle = '#1e2126'; g.lineWidth = 6; g.stroke();
-    g.lineWidth = 3; for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283; g.beginPath(); g.moveTo(64 + Math.cos(a) * 46, 64 + Math.sin(a) * 46); g.lineTo(64 + Math.cos(a) * 54, 64 + Math.sin(a) * 54); g.stroke(); }
-    g.lineWidth = 6; g.beginPath(); g.moveTo(64, 64); g.lineTo(64 + 26, 64 + 18); g.stroke(); g.lineWidth = 4; g.beginPath(); g.moveTo(64, 64); g.lineTo(64 + 12, 64 - 44); g.stroke();
-    g.fillStyle = 'rgba(220,235,250,0.4)'; g.beginPath(); g.arc(64, 64, 60, 0.3, 2.6); g.fill();
-  });
-  add('kiosk', 300, 110, (g, w, h) => { g.fillStyle = '#7a2a22'; g.fillRect(0, 0, w, h); text(g, 'NEWS · TEA · MAPS', w / 2, h / 2, F(40), '#eadfc4'); grime(g, w, h, 0.25); frostEdge(g, w, h, 0.5); });
-  add('note', 96, 128, (g, w, h) => { g.fillStyle = '#e9e2cc'; g.fillRect(0, 0, w, h); g.fillStyle = '#5a5648'; for (let i = 0; i < 9; i++) g.fillRect(10, 16 + i * 12, w - 20 - (i % 3) * 14, 2); });
-  add('exit', 200, 80, (g, w, h) => { g.fillStyle = '#0c3a22'; g.fillRect(0, 0, w, h); text(g, 'EXIT', 74, h / 2 + 3, F(56), '#d6ffe6'); g.strokeStyle = '#d6ffe6'; g.lineWidth = 8; g.beginPath(); g.moveTo(136, 40); g.lineTo(184, 40); g.moveTo(166, 22); g.lineTo(186, 40); g.lineTo(166, 58); g.stroke(); });
-  add('stripes', 256, 48, (g, w, h) => { g.fillStyle = '#d7b24a'; g.fillRect(0, 0, w, h); g.fillStyle = '#1b1b1b'; for (let i = -2; i < 10; i++) { g.beginPath(); g.moveTo(i * 40, 0); g.lineTo(i * 40 + 20, 0); g.lineTo(i * 40 - 28, h); g.lineTo(i * 40 - 48, h); g.fill(); } grime(g, w, h, 0.25, 20); });
-  add('metro', 160, 160, (g, w, h) => { g.clearRect(0, 0, w, h); g.fillStyle = '#a3261c'; g.beginPath(); g.arc(80, 80, 74, 0, 7); g.fill(); text(g, 'M', 80, 88, F(120), '#eee6d2'); frostEdge(g, w, h, 0.5); });
-  add('tvoff', 64, 64, (g, w, h) => { g.fillStyle = '#05070a'; g.fillRect(0, 0, w, h); const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, 'rgba(120,150,190,0.25)'); gr.addColorStop(0.5, 'rgba(120,150,190,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
-  return { canvas: c, rects };
-}
-
 // ---------------------------------------------------------------- little sprites
-function glowTex() {
+export function glowTex() {
   const c = cv(128, 128), g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
   gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.18, 'rgba(255,255,255,0.55)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.13)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
   g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return tex(c, { repeat: false });
 }
-function puffTex() {
+export function puffTex() {
   const c = pix(64, 64, (u, v, o) => { const d = Math.hypot(u - 0.5, v - 0.5) * 2, n = tf(u, v, 4, 4, 3, 90); o[0] = o[1] = o[2] = 255; o[3] = 255 * clamp((1 - d) * 1.3) * clamp(0.35 + n); });
   return tex(c, { repeat: false });
 }
-function printTex() {
+export function printTex() {
   const c = cv(32, 64), g = c.getContext('2d'); g.clearRect(0, 0, 32, 64); g.fillStyle = 'rgba(255,255,255,1)';
   g.beginPath(); g.ellipse(16, 22, 10, 17, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(16, 52, 8, 9, 0, 0, 7); g.fill(); g.filter = 'blur(2px)'; g.drawImage(c, 0, 0); return tex(c, { repeat: false });
 }
 
 // ---------------------------------------------------------------- the material set
-export function makeMaterials(envMap) {
+// envMap: what shiny things reflect. signs (optional): { canvas, rects } a sheet of signs and posters the game has drawn.
+export function makeMaterials(envMap, signs) {
   const S = (map, o = {}) => new THREE.MeshStandardMaterial({ map, roughness: 0.9, metalness: 0, ...o });
+  const relief = (m, strength, scale = 1) => { const n = tex(reliefFrom(m.map.image, strength), { srgb: false }); n.wrapS = m.map.wrapS; n.wrapT = m.map.wrapT; m.normalMap = n; m.normalScale = new THREE.Vector2(scale, scale); return m; };
   const M = {}, T = {};
   T.concrete = tex(concrete(1, 112, 0.34)); T.concreteExt = tex(concrete(2, 98, 0.4));
   M.concrete = S(T.concrete); M.concreteExt = S(T.concreteExt);
@@ -372,13 +281,15 @@ export function makeMaterials(envMap) {
   M.glassA = glass(1, 0.55); M.glassB = glass(2, 0.15);
   M.facadeA = S(tex(facade(0, '#aab4c4'))); M.facadeB = S(tex(facade(1, '#c0b4a6'))); M.facadeC = S(tex(facade(2, '#96a2a8'))); M.facadeD = S(tex(facade(3, '#b3a79a')));
   M.shopA = S(tex(shopfront(0))); M.shopB = S(tex(shopfront(1)));
-  const atlas = makeAtlas(); T.atlas = tex(atlas.canvas, { repeat: false, aniso: 8 });
-  M.signs = S(T.atlas, { roughness: 0.8, alphaTest: 0.3 }); M.signs.userData = { noCast: true };
-  M.signsLit = new THREE.MeshStandardMaterial({ map: T.atlas, emissiveMap: T.atlas, emissive: 0xffffff, emissiveIntensity: 1.6, roughness: 0.8 }); M.signsLit.userData = { noCast: true };
+  for (const [k, st, sc] of [['concrete', 2.6, 1], ['concreteExt', 2.6, 1], ['wallpaper', 1.6, 0.8], ['corridor', 1.8, 0.8], ['lobbywall', 2.4, 1], ['ceiling', 2.0, 0.8], ['woodfloor', 2.6, 1], ['lino', 1.4, 0.6], ['tiles', 3.0, 1],
+    ['wood', 1.6, 0.7], ['woodDark', 1.6, 0.7], ['plank', 2.0, 0.8], ['rust', 2.4, 1], ['metalDark', 1.6, 0.6], ['metalGreen', 1.6, 0.6], ['facadeA', 3.0, 1], ['facadeB', 3.0, 1], ['facadeC', 3.0, 1], ['facadeD', 3.0, 1], ['shopA', 2.6, 1], ['shopB', 2.6, 1], ['fabric', 2.0, 0.8], ['blanket', 2.0, 0.8], ['mattress', 1.6, 0.6], ['rug', 2.0, 0.8]]) relief(M[k], st, sc);
+  if (signs) { T.atlas = tex(signs.canvas, { repeat: false, aniso: 8 });
+    M.signs = S(T.atlas, { roughness: 0.8, alphaTest: 0.3 }); M.signs.userData = { noCast: true };
+    M.signsLit = new THREE.MeshStandardMaterial({ map: T.atlas, emissiveMap: T.atlas, emissive: 0xffffff, emissiveIntensity: 1.6, roughness: 0.8 }); M.signsLit.userData = { noCast: true }; }
   M.far = new THREE.MeshBasicMaterial({ color: 0x0b1322, fog: false });                                                  // the Tower: a shape against the sky
   M.warm = new THREE.MeshStandardMaterial({ color: 0x1a1008, emissive: 0xffa040, emissiveIntensity: 5, roughness: 1 });  // lit doorways and the one lit window
   M.cold = new THREE.MeshStandardMaterial({ color: 0x0c1016, emissive: 0xbfd8ff, emissiveIntensity: 6, roughness: 1 });  // floodlights
   for (const k of ['warm', 'cold', 'far']) M[k].userData = { noCast: true };
   for (const k in M) if (!M[k].userData) M[k].userData = {};
-  return { M, rects: atlas.rects, tex: { glow: glowTex(), puff: puffTex(), print: printTex(), snow: T.snow, snowN: T.snowN, atlas: T.atlas } };
+  return { M, rects: signs ? signs.rects : {}, tex: { glow: glowTex(), puff: puffTex(), print: printTex(), snow: T.snow, snowN: T.snowN, atlas: T.atlas } };
 }

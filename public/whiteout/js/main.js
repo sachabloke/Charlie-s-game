@@ -1,10 +1,11 @@
 // WHITEOUT, chapter one. You wake in a frozen flat, get out of the building, and follow the red light down the avenue.
-import * as THREE from './three.js';
-import { makeMaterials } from './textures.js';
+import * as THREE from '../../kit/three.js';
+import { makeMaterials } from '../../kit/surfaces.js';
+import { makeSigns } from './signs.js';
 import { buildWorld, Y2, BLOCK } from './world.js';
-import { makeSky, makeSnow, makeFlameMaterial, MOON_DIR, FOG_COLOR } from './sky.js';
-import { makePost } from './post.js';
-import { Sound } from './audio.js';
+import { makeSky, makeSnow, makeFlameMaterial, MOON_DIR, FOG_COLOR } from '../../kit/sky.js';
+import { makePost } from '../../kit/picture.js';
+import { Sound } from '../../kit/sound.js';
 import { FIRES, TRAIL } from './city.js';
 
 const $ = (id) => document.getElementById(id);
@@ -27,10 +28,10 @@ const NOTE_COUNT = Object.keys(NOTES).length;
 const CODE = '4172';
 
 // ------------------------------------------------------------------ renderer and quality
-const QUALITY = {
-  high: { dpr: 1.5, msaa: 4, bloom: true, shadow: 2048, snow: 7000, torchShadow: true },
-  medium: { dpr: 1.1, msaa: 2, bloom: true, shadow: 1024, snow: 4000, torchShadow: false },
-  low: { dpr: 0.8, msaa: 0, bloom: false, shadow: 0, snow: 1800, torchShadow: false },
+const QUALITY = {   // ao = soft shadow where things meet (0 = off, else detail); mist = beams of light in the air (0 = off, else steps along each ray)
+  high: { dpr: 1.5, msaa: 4, bloom: true, shadow: 2048, snow: 7000, torchShadow: true, ao: 4, mist: 22 },
+  medium: { dpr: 1.1, msaa: 2, bloom: true, shadow: 1024, snow: 4000, torchShadow: false, ao: 3, mist: 12 },
+  low: { dpr: 0.8, msaa: 0, bloom: false, shadow: 0, snow: 1800, torchShadow: false, ao: 0, mist: 0 },
 };
 let qualityMode = params.get('q') || store.get('wo_quality') || 'auto';
 const weak = (navigator.hardwareConcurrency || 4) <= 4 || /Mobi|Android|iPhone|iPad|CrOS/.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
@@ -46,7 +47,7 @@ const camera = new THREE.PerspectiveCamera(72, 1, 0.08, 900); camera.rotation.or
 const sky = makeSky(); sky.mesh.scale.setScalar(400); scene.add(sky.mesh);
 let envMap = null;
 { const pm = new THREE.PMREMGenerator(renderer), s = new THREE.Scene(), m = sky.mesh.clone(); s.add(m); envMap = pm.fromScene(s, 0, 0.1, 1000).texture; pm.dispose(); }
-const { M: mats, rects, tex } = makeMaterials(envMap);
+const { M: mats, rects, tex } = makeMaterials(envMap, makeSigns());
 const world = buildWorld(mats, rects); scene.add(world.group);
 const dyn = world.dyn, anchors = world.anchors;
 
@@ -55,7 +56,12 @@ const hemi = new THREE.HemisphereLight(0x5f7fbd, 0x2b3650, 1.3); scene.add(hemi)
 const moon = new THREE.DirectionalLight(0xa6c2ff, 4.6); moon.castShadow = true; moon.shadow.bias = -0.0006; moon.shadow.normalBias = 0.06;
 Object.assign(moon.shadow.camera, { left: -42, right: 42, top: 42, bottom: -42, near: 10, far: 330 }); scene.add(moon, moon.target);
 const torch = new THREE.SpotLight(0xffe9cc, 0, 40, 0.56, 1.0, 1.4); torch.shadow.mapSize.set(1024, 1024); torch.shadow.bias = -0.002; torch.shadow.camera.near = 0.2; torch.shadow.camera.far = 30;
-const TORCH_POWER = 56;
+const TORCH_POWER = 115;
+{ const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, 256, 256);
+  const r = g.createRadialGradient(128, 128, 0, 128, 128, 126); r.addColorStop(0, '#fff'); r.addColorStop(0.16, '#f4f0e6'); r.addColorStop(0.3, '#9a968c'); r.addColorStop(0.52, '#5e5b55'); r.addColorStop(0.6, '#77736b'); r.addColorStop(0.68, '#3a3835'); r.addColorStop(0.9, '#12110f'); r.addColorStop(1, '#000');
+  g.fillStyle = r; g.fillRect(0, 0, 256, 256); g.globalCompositeOperation = 'multiply';
+  g.filter = 'blur(5px)'; for (let i = 0; i < 26; i++) { const a = Math.random() * 6.283, d = 30 + Math.random() * 85, v = 214 + Math.random() * 41 | 0; g.fillStyle = `rgb(${v},${v},${v})`; g.beginPath(); g.ellipse(128 + Math.cos(a) * d, 128 + Math.sin(a) * d, 12 + Math.random() * 26, 5 + Math.random() * 9, a, 0, 7); g.fill(); } g.filter = 'none';
+  const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; torch.map = tx; }
 const pool = [0, 1].map(() => { const l = new THREE.PointLight(0xff8a3a, 0, 18, 1.6); scene.add(l); return l; });
 
 // snow, glows, fire
@@ -98,6 +104,7 @@ function resize() {
   const pr = renderer.getPixelRatio(); post.setSize(Math.max(2, Math.round(w * pr)), Math.max(2, Math.round(h * pr))); camera.aspect = w / h; camera.fov = w < h ? 86 : 72; camera.updateProjectionMatrix();
   if (snow) snow.uniforms.uSize.value = h * pr * 0.085;
 }
+post.mist.uInside.value.set(BLOCK.x0, BLOCK.z0, BLOCK.x1, BLOCK.z1); post.mist.uRoof.value = BLOCK.h; post.mist.uTorchCol.value.setRGB(0.1, 0.088, 0.07);
 window.addEventListener('resize', resize); applyQuality(quality);
 
 // ------------------------------------------------------------------ game state
@@ -108,7 +115,8 @@ const S = {
   flags: { torch: false, torchOn: true, doorNote: false, aptOpen: false, officeOpen: false, crowbar: false, exitOpen: false, beenOut: false },
   notes: [], said: {}, warmth: 100, iceHits: 0, lastSafe: { x: 10.5, y: 0, z: 12.2, yaw: Math.PI }, objective: '', wrong: 0, exposure: 2.0, fade: 1, fadeTo: 1, fadeCol: 0, blur: 0, shake: 0, gust: 0, intro: 0, blackout: 0, ending: 0,
 };
-const sound = new Sound(); sound.muted = store.get('wo_mute') === '1';
+const sound = new Sound(['wind-open', 'step-stone', 'step-gravel', 'door', 'creak', 'drip-stone', 'dog', 'bell']); let lonelyT = 25, dripT = 6;
+sound.muted = store.get('wo_mute') === '1';
 const save = () => { if (S.mode === 'play' || S.mode === 'ui') store.set('wo_save', JSON.stringify({ v: 1, flags: S.flags, notes: S.notes, said: S.said, pos: [S.pos.x, S.pos.y, S.pos.z], yaw: S.yaw, warmth: S.warmth, played: S.played, iceHits: S.iceHits, lastSafe: S.lastSafe, objective: S.objective })); };
 const loadSave = () => { try { const d = JSON.parse(store.get('wo_save') || 'null'); return d && d.v === 1 ? d : null; } catch (e) { return null; } };
 
@@ -206,7 +214,7 @@ document.addEventListener('pointerlockchange', () => { if (!document.pointerLock
 let lastLockAt = 0;
 const KEYMAP = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b', KeyA: 'l', ArrowLeft: 'l', KeyD: 'r', ArrowRight: 'r', ShiftLeft: 'run', ShiftRight: 'run' };
 window.addEventListener('keydown', (e) => {
-  if (e.repeat) return; sound.start('./sounds/');
+  if (e.repeat) return; sound.start('../kit/sounds/');
   if (S.mode === 'ui') {
     if (S.ui === 'keypad') { if (/^Digit\d$|^Numpad\d$/.test(e.code)) kpPress(e.code.slice(-1)); else if (e.code === 'Backspace') kpPress('del'); }
     if (e.code === 'Escape' || (e.code === 'KeyE' && S.ui === 'paper') || (e.code === 'Enter' && S.ui !== 'keypad') || (e.code === 'KeyN' && S.ui === 'journal') || (e.code === 'KeyP' && S.ui === 'pause')) { e.preventDefault(); closeUi(); }
@@ -224,7 +232,7 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = false; });
 window.addEventListener('blur', () => { keys = {}; });
 document.addEventListener('visibilitychange', () => { if (document.hidden && S.mode === 'play') openPause(); });
-canvas.addEventListener('mousedown', () => { sound.start('./sounds/'); if (S.mode !== 'play' || touch.on) return; if (dragLook) dragging = true; else if (!document.pointerLockElement) lockPointer(); });
+canvas.addEventListener('mousedown', () => { sound.start('../kit/sounds/'); if (S.mode !== 'play' || touch.on) return; if (dragLook) dragging = true; else if (!document.pointerLockElement) lockPointer(); });
 window.addEventListener('mouseup', () => { dragging = false; });
 window.addEventListener('mousemove', (e) => { if (S.mode !== 'play') return; if (document.pointerLockElement === canvas || (dragLook && dragging)) look(e.movementX * 0.0023, e.movementY * 0.0023); });
 function look(dx, dy) { S.yaw -= dx; S.pitch = clamp(S.pitch - dy, -1.35, 1.35); }
@@ -232,7 +240,7 @@ function toggleTorch() { if (!S.flags.torch) return; S.flags.torchOn = !S.flags.
 const STICK = 52;
 window.addEventListener('touchstart', () => { if (!touch.on) { touch.on = true; document.body.classList.add('touch'); } }, { passive: true, capture: true });
 canvas.addEventListener('touchstart', (e) => {
-  sound.start('./sounds/');
+  sound.start('../kit/sounds/');
   for (const t of e.changedTouches) { const st = { id: t.identifier, sx: t.clientX, sy: t.clientY, x: t.clientX, y: t.clientY }; if (t.clientX < window.innerWidth * 0.45) { if (!touch.move) { touch.move = st; const k = $('stick'); k.style.left = t.clientX + 'px'; k.style.top = t.clientY + 'px'; k.classList.add('on'); } } else if (!touch.look) touch.look = st; }
   e.preventDefault();
 }, { passive: false });
@@ -245,7 +253,7 @@ canvas.addEventListener('touchmove', (e) => {
 }, { passive: false });
 const touchEnd = (e) => { for (const t of e.changedTouches) { if (touch.move && touch.move.id === t.identifier) { touch.move = null; $('stick').classList.remove('on'); $('stickKnob').style.transform = ''; } if (touch.look && touch.look.id === t.identifier) touch.look = null; } };
 canvas.addEventListener('touchend', touchEnd); canvas.addEventListener('touchcancel', touchEnd);
-const tap = (id, fn) => $(id).addEventListener('click', (e) => { e.preventDefault(); sound.start('./sounds/'); fn(e); });
+const tap = (id, fn) => $(id).addEventListener('click', (e) => { e.preventDefault(); sound.start('../kit/sounds/'); fn(e); });
 tap('btnUse', () => interact()); tap('btnTorch', toggleTorch); tap('btnNotes', () => { if (S.mode === 'play') openJournal(); }); tap('btnPause', () => { if (S.mode === 'play') openPause(); });
 tap('paperClose', closeUi); tap('kpClose', closeUi); tap('journalClose', closeUi); tap('resumeBtn', closeUi);
 document.querySelectorAll('#kpKeys button').forEach((b) => b.addEventListener('click', () => kpPress(b.dataset.k)));
@@ -328,7 +336,7 @@ function triggers(outside) {
     if (p.z > 96 && p.z < 110) once('clock', 'All the clocks stopped at the same time.');
     if (p.z > 132 && p.z < 150) once('window', 'A light. Up there, in that window. Someone is still here.', 5200);
     if (p.z > 164) once('past', 'Almost there. Keep moving.');
-    if (p.z > 192) { if (once('plaza', 'The Tower.', 3000)) setObjective('Go through the gate'); }
+    if (p.z > 192) { if (once('plaza', 'The Tower.', 3000)) { setObjective('Go through the gate'); sound.play('bell', { gain: 0.3, rate: 0.7, lp: 1800 }); } }
     if (p.z > 235.1 && p.x > 10.3 && p.x < 12.4 && !S.ending) { S.ending = 0.001; S.mode = 'end'; if (document.pointerLockElement) document.exitPointerLock(); }
   }
 }
@@ -350,7 +358,7 @@ function continueGame(d) {
 }
 function hideTitle() { $('title').classList.add('gone'); setTimeout(() => { $('title').hidden = true; }, 900); }
 dyn.exitIce.children.forEach((m) => { m.userData.home = m.position.clone(); });
-tap('playBtn', () => { sound.start('./sounds/'); newGame(); });
+tap('playBtn', () => { sound.start('../kit/sounds/'); newGame(); });
 tap('continueBtn', () => { const d = loadSave(); if (d) continueGame(d); });
 tap('againBtn', () => { store.del('wo_save'); $('end').hidden = true; newGame(); });
 { const d = loadSave(); $('continueBtn').hidden = !d; if (d) { $('playBtn').textContent = 'New game'; $('playBtn').classList.add('second'); } $('qualitySel').value = qualityMode; }
@@ -366,7 +374,7 @@ function introCam(t) {
 
 // ------------------------------------------------------------------ every frame
 let last = performance.now(), fpsAcc = 0, fpsN = 0, fpsSince = performance.now(), hudT = 0;
-const _c = new THREE.Vector3();
+const _c = new THREE.Vector3(), _moonCol = new THREE.Color();
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now; S.time += dt; const t = S.time;
@@ -440,12 +448,18 @@ function frame(now) {
   for (const s of puffs) if (s.visible) { const u = s.userData; u.life += dt; const k = u.life / 1.9; s.position.addScaledVector(u.vel, dt); u.vel.multiplyScalar(1 - dt * 1.4); s.scale.setScalar(0.12 + k * 0.55); s.material.opacity = 0.11 * Math.sin(Math.min(1, k) * Math.PI) * (1 - k * 0.3); if (k >= 1) s.visible = false; }
   let radio = 0; if (!outside && F.officeOpen) radio = clamp(1 - Math.hypot(S.pos.x - anchors.radio.x, S.pos.z - anchors.radio.z) / 7) * (S.pos.y < 2 ? 1 : 0);
   let fireVol = 0; for (const f of fires) fireVol = Math.max(fireVol, clamp(1 - Math.hypot(camera.position.x - f.x, camera.position.z - f.z) / 14));
-  sound.ambience({ open, gust: S.gust, fire: fireVol * fireVol, radio, on: S.mode !== 'title' || true });
+  sound.ambience({ open, gust: S.gust, fire: fireVol * fireVol, radio, on: true });
+  if (S.mode === 'play') {                                             // small lonely sounds: a dog far off in the streets, water dripping in the stairwell
+    lonelyT -= dt; if (lonelyT < 0) { lonelyT = 45 + Math.random() * 60; if (outside) sound.play('dog', { gain: 0.1, rate: 0.9, lp: 900 }); }
+    dripT -= dt; if (dripT < 0) { dripT = 2.5 + Math.random() * 6; if (!outside && S.pos.x > 14.5) sound.play('drip-stone', { gain: 0.25, rate: 0.8 + Math.random() * 0.3 }); }
+  }
 
   // the picture
   const u = post.u; u.uExposure.value = S.exposure; u.uFade.value = clamp(S.fade); u.uFadeCol.value.setRGB(S.fadeCol ? 1 : 0, S.fadeCol ? 0.93 : 0, S.fadeCol ? 0.82 : 0); u.uBlur.value = S.blur;
   u.uCold.value = F.beenOut ? sstep(62, 0, S.warmth) : 0; u.uBloom.value = 0.11; u.uVignette.value = 0.55; u.uGrain.value = 0.035;
-  post.render(scene, camera);
+  _moonCol.copy(moon.color).multiplyScalar(moon.intensity * 0.055); camera.getWorldDirection(_fwd);
+  post.mist.uDust.value = 0.022; post.mist.uHaze.value = 0.0028 + 0.01 * S.gust; post.mist.uMist.value = 0.021 + 0.05 * S.gust;
+  post.render(scene, camera, quality === 'low' ? null : { dir: MOON_DIR, color: _moonCol, shadow: moon.shadow }, { time: t, torchDir: _fwd, torchOn: F.torch && F.torchOn && !inTitle && S.mode !== 'intro', exposure: S.exposure });
 
   // HUD (a few times a second is plenty)
   hudT -= dt; if (hudT < 0) { hudT = 0.12; refreshPrompt(); $('warmFill').style.transform = `scaleX(${clamp(S.warmth / 100)})`; $('warmHud').classList.toggle('low', S.warmth < 35); }

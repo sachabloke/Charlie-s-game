@@ -1,4 +1,4 @@
-// Level-building helpers: everything static is collected per material and merged into a handful of meshes,
+// KIT: level-building helpers: everything static is collected per material and merged into a handful of meshes,
 // so a whole building costs a few draw calls. Also keeps the lists the player collides with and stands on.
 import * as THREE from './three.js';
 

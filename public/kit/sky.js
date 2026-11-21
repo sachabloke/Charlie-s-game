@@ -1,4 +1,4 @@
-// The night sky (moon, stars, a slow aurora), the falling snow, fire, and the Tower's searchlight.
+// KIT: the night sky (moon, stars, a slow aurora), the falling snow, fire, and the Tower's searchlight.
 import * as THREE from './three.js';
 
 export const MOON_DIR = new THREE.Vector3(0.22, 0.5, 0.84).normalize();   // where the moon sits: low over the avenue, south of the flat

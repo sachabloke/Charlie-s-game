@@ -1,7 +1,7 @@
 // The frozen city outside: the cross street in front of the flats, the long avenue south, the plaza and the Tower gate.
-import * as THREE from './three.js';
-import { fbm } from './build.js';
-import { makeBeam } from './sky.js';
+import * as THREE from '../../kit/three.js';
+import { fbm } from '../../kit/build.js';
+import { makeBeam } from '../../kit/sky.js';
 
 export const TRAIL = [[10.5, 15], [12.5, 19.5], [13, 23], [10, 34], [5.5, 48], [3.2, 58], [4, 66], [5, 76], [8, 90], [12, 104], [15.5, 112], [16, 124], [13.5, 134], [10.5, 148], [10.5, 160], [8, 175], [8, 185], [10.5, 198], [16.6, 205], [17.2, 214], [11.8, 226], [11.3, 235]];
 export const FIRES = [[14.5, 20.5], [4.4, 82], [16.8, 133], [4.5, 186]];

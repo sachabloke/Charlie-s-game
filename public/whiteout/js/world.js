@@ -1,7 +1,7 @@
 // The block of flats you wake up in: flat 34 on the second floor, the corridor, the stairwell, and the lobby with the caretaker's office.
 // Distances are metres. X runs east, Z runs south (towards the avenue and the Tower), Y is up.
-import * as THREE from './three.js';
-import { Builder, fbm, rng } from './build.js';
+import * as THREE from '../../kit/three.js';
+import { Builder, fbm, rng } from '../../kit/build.js';
 import { buildCity } from './city.js';
 
 export const FLOOR = 3.2, Y2 = 6.4;                       // storey height; height of the second floor

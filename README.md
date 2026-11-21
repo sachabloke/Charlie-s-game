@@ -11,18 +11,15 @@ Six notes to find tell the story. About 10 minutes. It saves by itself (Continue
 - **Tablet or phone:** left thumb moves, right thumb looks, buttons for Use / Torch / Notes.
 - **Graphics:** Auto / High / Medium / Low on the title screen and the pause menu; Auto steps down by itself if the game is choppy.
 
-How it is built (all in `public/whiteout/js/`, no build step, no picture files):
+How it is built (no build step, no picture files):
 
 | File | What it holds |
 |---|---|
-| `main.js` | the game: story steps, controls, warmth, saving, the picture each frame |
-| `world.js` | the block of flats (flat 34, corridor, stairwell, lobby, office) |
-| `city.js` | the street, avenue, plaza, gate and Tower; where the fires and the trail are |
-| `textures.js` | every surface and sign, painted in code |
-| `sky.js` | moon, stars, aurora, snowfall, flames, the searchlight |
-| `post.js` | glow, night colour and the frost that creeps over the screen (adapted from Lake Valley) |
-| `audio.js` | sound; the six recordings in `sounds/` are free (see `sounds/CREDITS.md`) |
-| `build.js` | helpers that merge the scenery into a few meshes and keep the collision lists |
+| `public/whiteout/js/main.js` | the game: story steps, controls, warmth, saving |
+| `public/whiteout/js/world.js` | the block of flats (flat 34, corridor, stairwell, lobby, office) |
+| `public/whiteout/js/city.js` | the street, avenue, plaza, gate and Tower; where the fires and the trail are |
+| `public/whiteout/js/signs.js` | the game's posters, notices and signs |
+| [`public/kit/`](public/kit/) | **the shared kit**: the realistic picture (mist, light beams, soft shadows, glow), sky and snow, painted surfaces, the level builder, sound and 43 free recordings. Any game can use it; see its README |
 
 It has no maths questions and sends nothing to the parent dashboard yet.
 
